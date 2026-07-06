@@ -1,49 +1,82 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - UretimTakip.Web</title>
+    <title>@ViewData["Title"] - Üretim Takip Sistemi</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/UretimTakip.Web.styles.css" asp-append-version="true" />
+    <style>
+        .sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            min-height: 100vh;
+            background-color: #212529;
+        }
+
+            .sidebar .nav-link {
+                color: #adb5bd;
+                transition: all 0.2s;
+            }
+
+                .sidebar .nav-link:hover {
+                    color: #fff;
+                    background-color: #343a40;
+                }
+
+                .sidebar .nav-link.active {
+                    color: #fff;
+                    background-color: #0d6efd;
+                }
+
+        .topbar {
+            background-color: #ffffff;
+            border-bottom: 1px solid #dee2e6;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">UretimTakip.Web</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
+    <div class="d-flex">
+        <div class="sidebar p-3 text-white">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+                <span class="fs-4 fw-bold">⚙️ Üretim Takip</span>
+            </a>
+            <hr>
+            <ul class="nav nav-pills flex-column mb-auto">
+                <li class="nav-item mb-2">
+                    <a asp-controller="Home" asp-action="Index" class="nav-link">🏠 Ana Sayfa</a>
+                </li>
+                <li class="mb-2">
+                    <a asp-controller="Urun" asp-action="Index" class="nav-link">📦 Ürün Yönetimi</a>
+                </li>
+                <li class="mb-2">
+                    <a asp-controller="Depo" asp-action="Index" class="nav-link">🏢 Depo Yönetimi</a>
+                </li>
+                <li class="mb-2">
+                    <a asp-controller="Stok" asp-action="Index" class="nav-link">📊 Stok Kontrolü</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="w-100 d-flex flex-column">
+            <nav class="navbar topbar p-3 mb-4 justify-content-between">
+                <span class="text-muted fw-semibold">Fabrika Yönetim Paneli</span>
+                <div class="dropdown">
+                    <span class="fw-bold text-dark">👤 Fatma Saliha Urat</span>
                 </div>
+            </nav>
+
+            <div class="container-fluid px-4">
+                <main role="main" class="pb-3">
+                    @RenderBody()
+                </main>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - UretimTakip.Web - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true" ></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
