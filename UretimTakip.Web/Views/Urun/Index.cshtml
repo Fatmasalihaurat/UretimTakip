@@ -1,0 +1,166 @@
+@{
+    ViewData["Title"] = "Ürün Yönetimi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-dark">📦 Ürün Yönetimi</h2>
+    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#urunEkleModal">
+        ➕ Yeni Ürün Ekle
+    </button>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-4">Ürün Adı</th>
+                        <th>Ürün Kodu</th>
+                        <th>Fiyat</th>
+                        <th class="text-end pe-4">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="urunTabloGovdesi">
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            ⏳ Ürünler yükleniyor...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="urunEkleModal" tabindex="-1" aria-labelledby="urunEkleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="urunEkleModalLabel">✨ Yeni Ürün Ekle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <form id="urunEkleFormu">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ürün Adı</label>
+                        <input type="text" class="form-control" id="txtUrunAdi" required placeholder="Örn: Çelik Mil">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ürün Kodu</label>
+                        <input type="text" class="form-control" id="txtUrunKodu" required placeholder="Örn: CLK-102">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Birim Fiyat (TL)</label>
+                        <input type="number" step="0.01" class="form-control" id="txtFiyat" required placeholder="Örn: 150.50">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" id="btnUrunKaydet" class="btn btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Sayfa açıldığında ürünleri otomatik listele
+            urunleriGetir();
+
+            // 1. ÜRÜNLERİ LİSTELEYEN AJAX FONKSİYONU
+            function urunleriGetir() {
+                $.ajax({
+                    url: '/Urun/UrunleriListele', // Arka plandaki action adresi
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function (response) {
+                        var html = '';
+                        if (response.isSuccess && response.data.length > 0) {
+                            $.each(response.data, function (index, item) {
+                                html += `<tr>
+                                                <td class="ps-4 fw-semibold">${item.ad}</td>
+                                                <td><span class="badge bg-light text-dark border">${item.urunKodu}</span></td>
+                                                <td>${item.fiyat.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+                                                <td class="text-end pe-4">
+                                                    <button class="btn btn-sm btn-danger py-1" onclick="urunSil('${item.id}')">🗑️ Sil</button>
+                                                </td>
+                                             </tr>`;
+                            });
+                        } else {
+                            html = `<tr>
+                                            <td colspan="4" class="text-center text-muted py-4">📂 Listelenecek ürün bulunamadı.</td>
+                                        </tr>`;
+                        }
+                        $('#urunTabloGovdesi').html(html);
+                    },
+                    error: function () {
+                        $('#urunTabloGovdesi').html(`<tr><td colspan="4" class="text-center text-danger py-4">❌ Veriler yüklenirken bir hata oluştu!</td></tr>`);
+                    }
+                });
+            }
+
+            // 2. YENİ ÜRÜN EKLEYEN AJAX FONKSİYONU
+            $('#btnUrunKaydet').click(function () {
+                var model = {
+                    Ad: $('#txtUrunAdi').val(),
+                    UrunKodu: $('#txtUrunKodu').val(),
+                    Fiyat: parseFloat($('#txtFiyat').val())
+                };
+
+                if (!model.Ad || !model.UrunKodu || isNaN(model.Fiyat)) {
+                    alert('Lütfen tüm alanları eksiksiz doldurun!');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Urun/UrunEkle',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(model),
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            $('#urunEkleModal').modal('hide'); // Modalı kapat
+                            $('#urunEkleFormu')[0].reset(); // Formu temizle
+                            urunleriGetir(); // Tabloyu tazelemeyi tetikle
+                            alert(response.message);
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                    }
+                });
+            });
+
+            // 3. ÜRÜN SİLME AKSİYONU
+            window.urunSil = function (id) {
+                // Kullanıcıya silme işlemi için teyit sorusu soruluyor
+                if (confirm('Bu ürünü silmek istediğinize emin misiniz?')) {
+                    $.ajax({
+                        url: '/Urun/UrunSil', // İstek atılacak Controller/Action adresi
+                        type: 'POST',         // Veri değiştireceğimiz için POST metodu seçildi
+                        data: { id: id },     // Silinecek ürünün ID parametresi gönderiliyor
+                        success: function (response) {
+                            // Backend'den başarılı yanıt geldiyse
+                            if (response.isSuccess) {
+                                urunleriGetir(); // Tabloyu tazeleyerek silinen ürünü listeden kaldırıyoruz
+                                alert(response.message); // Kullanıcıya başarı mesajı gösteriliyor
+                            } else {
+                                alert('Hata: ' + response.message); // Backend'den gelen hata mesajı
+                            }
+                        },
+                        error: function () {
+                            // Sunucu hatası veya ağ bağlantı sorunları durumunda çalışan kısım
+                            alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                        }
+                    });
+                }
+            };
+        });
+    </script>
+}

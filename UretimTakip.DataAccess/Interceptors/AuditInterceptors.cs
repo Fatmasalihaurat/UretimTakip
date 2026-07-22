@@ -35,23 +35,41 @@ namespace UretimTakip.DataAccess.Interceptors
         }
 
         //Asıl işi yapan yardımcı method
-        private  void UpdateAuditProperties(DbContext context)
+        private void UpdateAuditProperties(DbContext context)
         {
             if (context == null) return;
-            //Değişiklik yakalama(ChangerTracker)
             var entries = context.ChangeTracker.Entries();
-            foreach(var entry in entries)
+            foreach (var entry in entries)
             {
+                // Ekleme işlemlerinde
                 if (entry.State == EntityState.Added)
                 {
-                    entry.Property("OlusturulmaTarihi").CurrentValue = DateTime.UtcNow;
+                    // OlusturulmaTarihi adında bir alan var mı kontrol et
+                    var prop = entry.Metadata.FindProperty("OlusturulmaTarihi");
+                    if (prop != null)
+                    {
+                        entry.Property("OlusturulmaTarihi").CurrentValue = DateTime.UtcNow;
+                    }
                 }
-
+                // Güncelleme işlemlerinde
                 else if (entry.State == EntityState.Modified)
                 {
-                    entry.Property("SonGuncellenmeTarihi").CurrentValue = DateTime.UtcNow;
+                    // SonGuncellenmeTarihi alanı var mı kontrol et
+                    var propSonGuncelleme = entry.Metadata.FindProperty("SonGuncellenmeTarihi");
+                    if (propSonGuncelleme != null)
+                    {
+                        entry.Property("SonGuncellenmeTarihi").CurrentValue = DateTime.UtcNow;
+                    }
+
+                    // Urunler tablosunda olduğu gibi GuncellenmeTarihi alanı var mı kontrol et
+                    var propGuncelleme = entry.Metadata.FindProperty("GuncellenmeTarihi");
+                    if (propGuncelleme != null)
+                    {
+                        entry.Property("GuncellenmeTarihi").CurrentValue = DateTime.UtcNow;
+                    }
                 }
             }
         }
+
     }
 }
