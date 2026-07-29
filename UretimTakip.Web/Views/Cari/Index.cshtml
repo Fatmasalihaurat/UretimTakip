@@ -150,6 +150,28 @@
                     }
                 });
             });
+                    // 3. CARİ SİLME AKSİYONU
+        window.cariSil = function (id) {
+            if (confirm('Bu cari kaydını silmek istediğinize emin misiniz?')) {
+                $.ajax({
+                    url: '/Cari/CariSil', // İstek atılacak adres
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            carileriGetir(); // Başarılıysa tabloyu yenile
+                            alert(response.message);
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                    }
+                });
+            }
+        };
+
         });
     </script>
 }
