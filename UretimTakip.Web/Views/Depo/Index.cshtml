@@ -1,0 +1,183 @@
+@{
+    ViewData["Title"] = "Depo Yönetimi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-dark">🏢 Depo Yönetimi</h2>
+    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#depoEkleModal">
+        ➕ Yeni Depo Ekle
+    </button>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-4">Depo Adı</th>
+                        <th>Depo Kodu</th>
+                        <th>Sorumlu Kişi</th>
+                        <th>Konum</th>
+                        <th>İrtibat Bilgisi</th>
+                        <th class="text-end pe-4">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="depoTabloGovdesi">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            ⏳ Depolar yükleniyor...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Depo Ekleme Modalı -->
+<div class="modal fade" id="depoEkleModal" tabindex="-1" aria-labelledby="depoEkleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="depoEkleModalLabel">✨ Yeni Depo Ekle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <form id="depoEkleFormu">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Depo Adı</label>
+                        <input type="text" class="form-control" id="txtDepoAdi" required placeholder="Örn: Çelik Depo">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Depo Kodu</label>
+                        <input type="text" class="form-control" id="txtDepoKodu" required placeholder="Örn: DEP-01">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Sorumlu Kişi</label>
+                        <input type="text" class="form-control" id="txtSorumluKisi" required placeholder="Örn: Ahmet Ünsal">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Konum</label>
+                        <input type="text" class="form-control" id="txtKonum" required placeholder="Örn: Eskişehir Tepebaşı">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">İrtibat Bilgisi</label>
+                        <input type="text" class="form-control" id="txtIrtibatBilgisi" required placeholder="Örn: 0555 555 55 55">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Adres</label>
+                        <textarea class="form-control" id="txtAdres" rows="3" required placeholder="Örn: Bağcılar Sk. No:20..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" id="btnDepoKaydet" class="btn btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            depolariGetir();
+
+            // 1. Depoları Listeleme AJAX Fonksiyonu
+            function depolariGetir() {
+                $.ajax({
+                    url: '/Depo/DepolariListele', 
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function (response) {
+                        var html = '';
+                        if (response.isSuccess && response.data.length > 0) {
+                            $.each(response.data, function (index, item) {
+                                 html += `<tr>
+                                                <td class="ps-4 fw-semibold">${item.ad}</td>
+                                                <td><span class="badge bg-light text-dark border">${item.depoKodu}</span></td>
+                                                <td>${item.sorumluKisi || '-'}</td>
+                                                <td>${item.konum || '-'}</td>
+                                                <td>${item.irtibatBilgisi || '-'}</td>
+                                                <td class="text-end pe-4">
+                                                    <button class="btn btn-sm btn-danger py-1" onclick="depoSil('${item.id}')">🗑️ Sil</button>
+                                                </td>
+                                             </tr>`;
+                            });
+                        } else {
+                           html = `<tr>
+                                            <td colspan="6" class="text-center text-muted py-4">📂 Listelenecek depo bulunamadı.</td>
+                                        </tr>`;
+                        }
+                        $('#depoTabloGovdesi').html(html);
+                    },
+                    error: function () {
+                        $('#depoTabloGovdesi').html(`<tr><td colspan="6" class="text-center text-danger py-4">❌ Veriler yüklenirken bir hata oluştu!</td></tr>`);
+                    }
+                });
+            }
+
+            // 2. Depo Ekleme Fonksiyonu
+            $('#btnDepoKaydet').click(function() {
+                var model = {
+                    Ad: $('#txtDepoAdi').val().trim(),
+                    DepoKodu: $('#txtDepoKodu').val().trim(),
+                    SorumluKisi: $('#txtSorumluKisi').val().trim(),
+                    Konum: $('#txtKonum').val().trim(),
+                    IrtibatBilgisi: $('#txtIrtibatBilgisi').val().trim(),
+                    Adres: $('#txtAdres').val().trim()
+                };
+
+                // Boş bırakılamaz alanları kontrol ediyoruz
+                if (!model.Ad || !model.DepoKodu || !model.SorumluKisi || !model.Konum || !model.IrtibatBilgisi || !model.Adres) {
+                    alert('Lütfen tüm alanları eksiksiz doldurun!');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Depo/DepoEkle',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(model),
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            $('#depoEkleModal').modal('hide'); // Modalı kapat
+                            $('#depoEkleFormu')[0].reset(); // Formu temizle
+                            depolariGetir(); // Tabloyu tazelemeyi tetikle
+                            alert(response.message);
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                    }
+                });
+            });
+
+            // 3. Depo Silme Fonksiyonu
+            window.depoSil = function (id) {
+                if (confirm('Bu depoyu silmek istediğinizden emin misiniz?')) {
+                    $.ajax({
+                        url: '/Depo/DepoSil', 
+                        type: 'POST',         
+                        data: { id: id },     
+                        success: function (response) {
+                            if (response.isSuccess) {
+                                depolariGetir(); 
+                                alert(response.message); 
+                            } else {
+                                alert('Hata: ' + response.message); 
+                            }
+                        },
+                        error: function () {
+                            alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                        }
+                    });
+                }
+            };
+        });
+    </script>
+}

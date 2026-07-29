@@ -1,0 +1,274 @@
+@{
+    ViewData["Title"] = "Stok Kontrolü";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-dark">📊 Stok Kontrolü</h2>
+    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#stokEkleModal">
+        ➕ Yeni Stok Tanımla
+    </button>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-4">Depo Adı</th>
+                        <th>Ürün Adı</th>
+                        <th>Stok Kodu</th>
+                        <th>Miktar (Adet)</th>
+                        <th>Son Güncellenme Tarihi</th>
+                        <th class="text-end pe-4">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="stokTabloGovdesi">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            ⏳ Stoklar yükleniyor...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Stok Tanımlama Modalı -->
+<div class="modal fade" id="stokEkleModal" tabindex="-1" aria-labelledby="stokEkleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="stokEkleModalLabel">✨ Yeni Stok Tanımla</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stokEkleFormu">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Depo Seçin</label>
+                        <select class="form-select" id="ddlDepo" required>
+                            <option value="">-- Depo Seçin --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ürün Seçin</label>
+                        <select class="form-select" id="ddlUrun" required>
+                            <option value="">-- Ürün Seçin --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Stok Kodu</label>
+                        <input type="text" class="form-control" id="txtStokKodu" required placeholder="Örn: STK-CLK-01">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Başlangıç Stok Miktarı</label>
+                        <input type="number" class="form-control" id="txtMiktar" min="0" required placeholder="Örn: 50">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" id="btnStokEkleKaydet" class="btn btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stok Güncelleme Modalı (Mevcut Miktar Revizesi İçin) -->
+<div class="modal fade" id="stokGuncelleModal" tabindex="-1" aria-labelledby="stokGuncelleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="stokGuncelleModalLabel">🔄 Stok Miktarını Güncelle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stokGuncelleFormu">
+                    <!-- Stok ID'sini saklamak için gizli input -->
+                    <input type="hidden" id="hdnStokId" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Depo Adı</label>
+                        <input type="text" class="form-control bg-light" id="lblDepoAdi" disabled />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ürün Adı</label>
+                        <input type="text" class="form-control bg-light" id="lblUrunAdi" disabled />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Yeni Stok Miktarı</label>
+                        <input type="number" class="form-control" id="txtYeniMiktar" min="0" required placeholder="Örn: 100">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" id="btnStokKaydet" class="btn btn-primary">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Sayfa yüklendiğinde stok verilerini otomatik getir
+            stoklariGetir();
+            // Dropdown listelerini (Ürün ve Depo) doldur
+            depolariveUrunleriGetir();
+
+            // 1. Stokları Getirme Fonksiyonu (AJAX GET)
+            function stoklariGetir() {
+                $.ajax({
+                    url: '/Stok/StoklariListele',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function (response) {
+                        var html = '';
+                        if (response.isSuccess && response.data.length > 0) {
+                            $.each(response.data, function (index, item) {
+                                html += `<tr>
+                                            <td class="ps-4 fw-semibold">${item.depoAdi}</td>
+                                            <td>${item.urunAdi}</td>
+                                            <td><span class="badge bg-light text-dark border">${item.stokKodu || '-'}</span></td>
+                                            <td><span class="fw-bold text-primary">${item.miktar} Adet</span></td>
+                                            <td>${item.sonGuncellenmeTarihi || '-'}</td>
+                                            <td class="text-end pe-4">
+                                                <button class="btn btn-sm btn-outline-primary py-1" onclick="stokGuncelleModalAc('${item.stokId}', '${item.depoAdi}', '${item.urunAdi}', ${item.miktar})">
+                                                    🔄 Güncelle
+                                                </button>
+                                            </td>
+                                         </tr>`;
+                            });
+                        } else {
+                            html = `<tr>
+                                        <td colspan="6" class="text-center text-muted py-4">📂 Listelenecek stok kaydı bulunamadı.</td>
+                                    </tr>`;
+                        }
+                        $('#stokTabloGovdesi').html(html);
+                    },
+                    error: function () {
+                        $('#stokTabloGovdesi').html(`<tr><td colspan="6" class="text-center text-danger py-4">❌ Stok verileri yüklenirken hata oluştu!</td></tr>`);
+                    }
+                });
+            }
+
+            // 2. Ürün ve Depo Dropdown'larını doldurma fonksiyonu (AJAX GET)
+            function depolariveUrunleriGetir() {
+                // Depoları çek
+                $.ajax({
+                    url: '/Stok/GetDepolar',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            var options = '<option value="">-- Depo Seçin --</option>';
+                            $.each(response.data, function (index, item) {
+                                options += `<option value="${item.depoId}">${item.depoAdi}</option>`;
+                            });
+                            $('#ddlDepo').html(options);
+                        }
+                    }
+                });
+
+                // Ürünleri çek
+                $.ajax({
+                    url: '/Stok/GetUrunler',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            var options = '<option value="">-- Ürün Seçin --</option>';
+                            $.each(response.data, function (index, item) {
+                                options += `<option value="${item.urunId}">${item.urunAdi}</option>`;
+                            });
+                            $('#ddlUrun').html(options);
+                        }
+                    }
+                });
+            }
+
+            // 3. Yeni Stok Tanımlama Kaydı (AJAX POST)
+            $('#btnStokEkleKaydet').click(function () {
+                var model = {
+                    DepoId: $('#ddlDepo').val(),
+                    UrunId: $('#ddlUrun').val(),
+                    StokKodu: $('#txtStokKodu').val().trim(),
+                    Miktar: parseInt($('#txtMiktar').val())
+                };
+
+                // Form validation
+                if (!model.DepoId || !model.UrunId || !model.StokKodu || isNaN(model.Miktar) || model.Miktar < 0) {
+                    alert('Lütfen tüm alanları eksiksiz ve doğru şekilde doldurun!');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Stok/StokEkle',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(model),
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            $('#stokEkleModal').modal('hide'); // Modalı kapat
+                            $('#stokEkleFormu')[0].reset(); // Formu temizle
+                            stoklariGetir(); // Tabloyu yenile
+                            alert(response.message);
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Sunucuyla iletişim kurulurken hata oluştu!');
+                    }
+                });
+            });
+
+            // 4. Güncelleme Modalı Açma Fonksiyonu
+            window.stokGuncelleModalAc = function (stokId, depoAdi, urunAdi, mevcutMiktar) {
+                $('#hdnStokId').val(stokId);
+                $('#lblDepoAdi').val(depoAdi);
+                $('#lblUrunAdi').val(urunAdi);
+                $('#txtYeniMiktar').val(mevcutMiktar);
+                
+                // Modalı ekranda göster
+                $('#stokGuncelleModal').modal('show');
+            }
+
+            // 5. Stok Miktarı Güncelleme Kaydetme Fonksiyonu (AJAX POST)
+            $('#btnStokKaydet').click(function () {
+                var id = $('#hdnStokId').val();
+                var yeniMiktar = parseInt($('#txtYeniMiktar').val());
+
+                // Miktar alanı doğrulama
+                if (isNaN(yeniMiktar) || yeniMiktar < 0) {
+                    alert('Lütfen geçerli ve 0 veya daha büyük bir miktar girin!');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Stok/StokGuncelle',
+                    type: 'POST',
+                    data: {
+                        id: id,
+                        yeniMiktar: yeniMiktar
+                    },
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            $('#stokGuncelleModal').modal('hide'); // Modalı kapat
+                            stoklariGetir(); // Tabloyu tazele
+                            alert(response.message);
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Sunucuyla iletişim kurulurken hata oluştu!');
+                    }
+                });
+            });
+        });
+    </script>
+}
