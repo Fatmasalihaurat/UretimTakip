@@ -14,6 +14,8 @@ namespace UretimTakip.DataAccess.Context
         public DbSet<Depo> Depolar { get; set; }
         public DbSet<Stok> Stoklar { get; set; }
         public DbSet<Cari> Cariler { get; set; }
+        public DbSet<Siparis> Siparisler { get; set; }
+        public DbSet<SiparisDetay> SiparislerDetaylar { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -24,6 +26,10 @@ namespace UretimTakip.DataAccess.Context
             modelBuilder.Entity<Depo>().ToTable("Depolar");
             modelBuilder.Entity<Stok>().ToTable("Stoklar");
             modelBuilder.Entity<Cari>().ToTable("Cariler");
+            modelBuilder.Entity<Siparis>().ToTable("Siparis");
+            modelBuilder.Entity<Siparis>().Property(s => s.ToplamTutar).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<SiparisDetay>().ToTable("SiparisDetay");
+            modelBuilder.Entity<SiparisDetay>().Property(s => s.BirimFiyat).HasColumnType("decimal(18,2)");
 
             modelBuilder.Entity<Stok>()
                 .HasOne<Depo>()

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using UretimTakip.core.DTOs;
 using UretimTakip.core.Models; 
 using UretimTakip.DataAccess.Context;
@@ -9,9 +9,9 @@ namespace UretimTakip.Web.Controllers
 {
     public class CariController : Controller
     {
-        private readonly ApplicationDbContext? _context;
+        private readonly ApplicationDbContext _context;
 
-        public CariController(ApplicationDbContext? context)
+        public CariController(ApplicationDbContext context)
         {
             _context = context;
         }

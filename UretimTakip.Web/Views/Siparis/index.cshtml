@@ -1,0 +1,492 @@
+@{
+    ViewData["Title"] = "Sipariş Yönetimi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-dark">🛒 Sipariş Yönetimi</h2>
+    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#siparisOlusturModal" onclick="yeniSiparisHazirla()">
+        ➕ Yeni Sipariş Oluştur
+    </button>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-4">Sipariş Numarası</th>
+                        <th>Müşteri (Cari)</th>
+                        <th>Sipariş Tarihi</th>
+                        <th>Toplam Tutar</th>
+                        <th>Durum</th>
+                        <th class="text-end pe-4">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="siparisTabloGovdesi">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            ⏳ Siparişler yükleniyor...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Sipariş oluşturma modalı -->
+<div class="modal fade" id="siparisOlusturModal" tabindex="-1" aria-labelledby="siparisOlusturModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="siparisOlusturModalLabel">✨ Yeni Sipariş Oluştur</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <form id="siparisOlusturFormu">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Müşteri (Cari)</label>
+                            <div class="input-group">
+                                <!-- Cari Seçim ID'sini gizli tutuyoruz -->
+                                <input type="hidden" id="hdnCariId" required />
+                                <!-- Seçilen Cari Adını sadece okunabilir gösteriyoruz -->
+                                <input type="text" id="txtSeciliCariAdi" class="form-control bg-light" placeholder="Lütfen sağdaki butondan bir müşteri (cari) seçiniz..." readonly required />
+                                <button class="btn btn-outline-primary fw-semibold" type="button" onclick="cariSecimModaliniAc()">🔍 Müşteri Seç</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
+                        <h5 class="fw-bold text-secondary mb-0">📦 Sipariş Edilen Ürünler</h5>
+                        <button type="button" class="btn btn-sm btn-success fw-semibold" onclick="satirEkle()">
+                            ➕ Satır Ekle
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 45%;">Ürün</th>
+                                    <th style="width: 15%;">Miktar</th>
+                                    <th style="width: 15%;">Birim Fiyat (TL)</th>
+                                    <th style="width: 20%;">Toplam (TL)</th>
+                                    <th style="width: 5%;" class="text-center">Sil</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detayTabloGovdesi">
+                                <!-- Dinamik satırlar buraya eklenecek -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-end align-items-center mt-3 pe-2">
+                        <h4 class="fw-bold text-dark mb-0">Genel Toplam: <span id="lblGenelToplam" class="text-primary">0,00 TL</span></h4>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-primary" onclick="siparisKaydet()">Siparişi Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cari Seçim Pop-up Modalı -->
+<div class="modal fade" id="cariSecModal" tabindex="-1" aria-labelledby="cariSecModalLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title fw-bold" id="cariSecModalLabel">👥 Müşteri (Cari) Seçimi</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="txtCariAra" class="form-control" placeholder="Müşteri adı veya cari koduna göre arama yapın..." oninput="cariAra()" />
+                </div>
+                <div class="table-responsive" style="max-height: 350px;">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Cari Kodu</th>
+                                <th>Müşteri Adı</th>
+                                <th>Tür</th>
+                                <th class="text-center" style="width: 15%;">Seçim</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cariSecimTabloGovdesi">
+                            <!-- Cariler JS tarafından buraya doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ürün Seçim Pop-up Modalı -->
+<div class="modal fade" id="urunSecModal" tabindex="-1" aria-labelledby="urunSecModalLabel" aria-hidden="true" style="z-index: 1065;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title fw-bold" id="urunSecModalLabel">📦 Ürün Seçimi</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="txtUrunAra" class="form-control" placeholder="Ürün adı veya sistem ürün koduna göre arama yapın..." oninput="urunAra()" />
+                </div>
+                <div class="table-responsive" style="max-height: 350px;">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Ürün Kodu</th>
+                                <th>Ürün Adı</th>
+                                <th>Marka / Model</th>
+                                <th>Varsayılan Fiyat</th>
+                                <th class="text-center" style="width: 15%;">Seçim</th>
+                            </tr>
+                        </thead>
+                        <tbody id="urunSecimTabloGovdesi">
+                            <!-- Ürünler JS tarafından buraya doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var urunlerListesi = []; // Dropdown ve pop-up için global ürün listesi
+        var carilerListesi = []; // Pop-up'ta arama yapabilmek için global cari listesi
+        var aktifUrunSecimSatiri = null; // Ürün seçiminin hangi satıra aktarılacağını tutan değişken
+
+        $(document).ready(function () {
+            siparisleriGetir();
+            carileriGetir();
+            urunleriGetir();
+        });
+
+        // 1. SİPARİŞLERİ LİSTELE
+        function siparisleriGetir() {
+            $.ajax({
+                url: '/Siparis/SiparisleriListele',
+                type: 'GET',
+                dataType: 'json',
+                success: function (response) {
+                    var html = '';
+                    if (response.isSuccess && response.data.length > 0) {
+                        $.each(response.data, function (index, item) {
+                            html += `<tr>
+                                        <td class="ps-4 fw-semibold">${item.siparisNumarasi}</td>
+                                        <td>${item.cariAdi}</td>
+                                        <td>${item.siparisTarihi}</td>
+                                        <td class="fw-semibold text-primary">${item.toplamTutar.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+                                        <td><span class="badge bg-warning text-dark">${item.durum}</span></td>
+                                        <td class="text-end pe-4">
+                                            <button class="btn btn-sm btn-outline-danger py-1" onclick="siparisSil('${item.siparisId}')">🗑️ Sil</button>
+                                        </td>
+                                     </tr>`;
+                        });
+                    } else {
+                        html = `<tr>
+                                    <td colspan="6" class="text-center text-muted py-4">📂 Kayıtlı sipariş bulunamadı.</td>
+                                 </tr>`;
+                    }
+                    $('#siparisTabloGovdesi').html(html);
+                },
+                error: function () {
+                    alert("Siparişler yüklenirken bir hata oluştu.");
+                }
+            });
+        }
+
+        // 2. CARİ LİSTESİNİ GETİR
+        function carileriGetir() {
+            $.ajax({
+                url: '/Cari/CarileriListele',
+                type: 'GET',
+                dataType: 'json',
+                success: function (response) {
+                    if (response.isSuccess) {
+                        carilerListesi = response.data;
+                    }
+                }
+            });
+        }
+
+        // 3. ÜRÜN LİSTESİNİ GETİR
+        function urunleriGetir() {
+            $.ajax({
+                url: '/Urun/UrunleriListele',
+                type: 'GET',
+                dataType: 'json',
+                success: function (response) {
+                    if (response.isSuccess) {
+                        urunlerListesi = response.data;
+                    }
+                }
+            });
+        }
+
+        // 4. CARİ SEÇİM MODALINI AÇ
+        function cariSecimModaliniAc() {
+            var html = '';
+            if (carilerListesi.length > 0) {
+                $.each(carilerListesi, function (index, item) {
+                    // C# DTO'dan gelebilecek olası isimlendirme varyasyonlarına karşı fallback'ler
+                    var cariId = item.id || item.cariId;
+                    var cariAd = item.ad || item.cariAdi;
+                    var cariKod = item.cariKodu || '';
+                    var cariTuru = item.cariTuru || '';
+
+                    html += `<tr class="cari-secim-satir" data-ad="${cariAd.toLowerCase()}" data-kod="${cariKod.toLowerCase()}">
+                                <td><span class="badge bg-light text-dark border">${cariKod}</span></td>
+                                <td class="fw-semibold">${cariAd}</td>
+                                <td>${cariTuru}</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="cariSec('${cariId}', '${cariAd}')">Seç</button>
+                                </td>
+                             </tr>`;
+                });
+            } else {
+                html = `<tr><td colspan="4" class="text-center text-muted">Sistemde müşteri bulunamadı. Lütfen önce Cari modülünden müşteri ekleyin.</td></tr>`;
+            }
+            $('#cariSecimTabloGovdesi').html(html);
+            $('#txtCariAra').val('');
+            $('#cariSecModal').modal('show');
+        }
+
+        // 5. CARİ MODALİNDAKİ ARAMA FONKSİYONU
+        function cariAra() {
+            var aranan = $('#txtCariAra').val().toLowerCase();
+            $('#cariSecimTabloGovdesi tr').each(function () {
+                var ad = $(this).data('ad') || '';
+                var kod = $(this).data('kod') || '';
+                if (ad.indexOf(aranan) > -1 || kod.indexOf(aranan) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+
+        // 6. CARİ SEÇ VE FORMA AKTAR
+        function cariSec(id, ad) {
+            $('#hdnCariId').val(id);
+            $('#txtSeciliCariAdi').val(ad);
+            $('#cariSecModal').modal('hide');
+        }
+
+        // 7. ÜRÜN SEÇİM MODALINI SATIR BAZINDA AÇ
+        function urunSecimModaliniAc(btn) {
+            aktifUrunSecimSatiri = $(btn).closest('tr'); // Seçimin hangi satıra yapılacağını saklıyoruz
+            var html = '';
+            if (urunlerListesi.length > 0) {
+                $.each(urunlerListesi, function (index, item) {
+                    // C# DTO / Entity modeli JSON formatlarında field eşleştirmesi
+                    var urunId = item.urunId || item.id;
+                    var urunAdi = item.urunAdi || item.ad;
+                    var urunKodu = item.sistemUrunKodu || item.urunKodu;
+                    var fiyat = item.fiyat || 0;
+                    var markaModel = (item.marka || '') + ' ' + (item.model || '');
+
+                    html += `<tr class="urun-secim-satir" data-ad="${urunAdi.toLowerCase()}" data-kod="${urunKodu.toLowerCase()}">
+                                <td><span class="badge bg-light text-dark border">${urunKodu}</span></td>
+                                <td class="fw-semibold">${urunAdi}</td>
+                                <td>${markaModel}</td>
+                                <td class="fw-semibold text-primary">${fiyat.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="urunSec('${urunId}', '${urunAdi}', ${fiyat})">Seç</button>
+                                </td>
+                             </tr>`;
+                });
+            } else {
+                html = `<tr><td colspan="5" class="text-center text-muted">Sistemde ürün bulunamadı. Lütfen önce Ürün modülünden ürün ekleyin.</td></tr>`;
+            }
+            $('#urunSecimTabloGovdesi').html(html);
+            $('#txtUrunAra').val('');
+            $('#urunSecModal').modal('show');
+        }
+
+        // 8. ÜRÜN SEÇİM MODALİNDEKİ ARAMA FONKSİYONU
+        function urunAra() {
+            var aranan = $('#txtUrunAra').val().toLowerCase();
+            $('#urunSecimTabloGovdesi tr').each(function () {
+                var ad = $(this).data('ad') || '';
+                var kod = $(this).data('kod') || '';
+                if (ad.indexOf(aranan) > -1 || kod.indexOf(aranan) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+
+        // 9. ÜRÜNÜ SEÇ VE SATIRA AKTAR
+        function urunSec(id, ad, fiyat) {
+            if (aktifUrunSecimSatiri) {
+                aktifUrunSecimSatiri.find('.urun-id-input').val(id);
+                aktifUrunSecimSatiri.find('.urun-adi-input').val(ad);
+                aktifUrunSecimSatiri.find('.fiyat-input').val(fiyat);
+                hesapla();
+            }
+            $('#urunSecModal').modal('hide');
+        }
+
+        // 10. MODAL AÇILIRKEN HAFASINI TEMİZLE VE BİR BOŞ SATIR EKLE
+        function yeniSiparisHazirla() {
+            $('#siparisOlusturFormu')[0].reset();
+            $('#hdnCariId').val('');
+            $('#txtSeciliCariAdi').val('');
+            $('#detayTabloGovdesi').empty();
+            $('#lblGenelToplam').text('0,00 TL');
+            satirEkle(); // İlk satır varsayılan olarak gelsin
+        }
+
+        // 11. DİNAMİK SATIR EKLE (SEÇİM MODALI DESTEKLİ)
+        function satirEkle() {
+            var satirHtml = `<tr>
+                                <td>
+                                    <div class="input-group">
+                                        <input type="hidden" class="urun-id-input" required />
+                                        <input type="text" class="form-control urun-adi-input bg-light" placeholder="Ürün seçmek için tıklayın..." readonly required onclick="urunSecimModaliniAc(this)" />
+                                        <button class="btn btn-outline-primary" type="button" onclick="urunSecimModaliniAc(this)">🔍 Seç</button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control miktar-input" value="1" min="1" oninput="hesapla()" required />
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control fiyat-input" step="0.01" min="0" oninput="hesapla()" required />
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control satir-toplam-input bg-light" value="0,00 TL" readonly />
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="satirSil(this)">❌</button>
+                                </td>
+                             </tr>`;
+
+            $('#detayTabloGovdesi').append(satirHtml);
+            hesapla();
+        }
+
+        // 12. SATIR SİL
+        function satirSil(btn) {
+            if ($('#detayTabloGovdesi tr').length > 1) {
+                $(btn).closest('tr').remove();
+                hesapla();
+            } else {
+                alert("Siparişte en az bir ürün satırı bulunmalıdır.");
+            }
+        }
+
+        // 13. HESAPLAMA (SATIR VE GENEL TOPLAM)
+        function hesapla() {
+            var genelToplam = 0;
+
+            $('#detayTabloGovdesi tr').each(function () {
+                var miktar = parseFloat($(this).find('.miktar-input').val()) || 0;
+                var fiyat = parseFloat($(this).find('.fiyat-input').val()) || 0;
+                var satirToplam = miktar * fiyat;
+                genelToplam += satirToplam;
+
+                $(this).find('.satir-toplam-input').val(satirToplam.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }));
+            });
+
+            $('#lblGenelToplam').text(genelToplam.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }));
+        }
+
+        // 14. SİPARİŞİ SUNUCUYA KAYDET
+        function siparisKaydet() {
+            var form = $('#siparisOlusturFormu')[0];
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            var cariId = $('#hdnCariId').val();
+            if (!cariId) {
+                alert("Lütfen bir müşteri (cari) seçiniz.");
+                return;
+            }
+
+            var detaylar = [];
+            var hata = false;
+
+            $('#detayTabloGovdesi tr').each(function () {
+                var urunId = $(this).find('.urun-id-input').val();
+                var miktar = parseInt($(this).find('.miktar-input').val()) || 0;
+                var fiyat = parseFloat($(this).find('.fiyat-input').val()) || 0;
+
+                if (!urunId) {
+                    alert("Lütfen tüm satırlarda ürün seçimi yapınız.");
+                    hata = true;
+                    return false; // Loop'tan çık
+                }
+
+                detaylar.push({
+                    UrunId: urunId,
+                    Miktar: miktar,
+                    BirimFiyat: fiyat
+                });
+            });
+
+            if (hata) return;
+
+            var siparisData = {
+                CariId: cariId,
+                SiparisTarihi: new Date().toISOString(),
+                Detaylar: detaylar
+            };
+
+            $.ajax({
+                url: '/Siparis/SiparisOlustur',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(siparisData),
+                success: function (response) {
+                    if (response.isSuccess) {
+                        alert(response.message);
+                        $('#siparisOlusturModal').modal('hide');
+                        siparisleriGetir(); // Listeyi güncelle
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function () {
+                    alert("Sipariş kaydedilirken bir hata oluştu.");
+                }
+            });
+        }
+
+        // 15. SİPARİŞİ İPTAL ET / SİL
+        function siparisSil(id) {
+            if (confirm("Bu siparişi iptal etmek istediğinize emin misiniz?")) {
+                $.ajax({
+                    url: '/Siparis/SiparisSil',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            alert(response.message);
+                            siparisleriGetir(); // Tabloyu yeniler
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Sipariş iptal edilirken bir hata oluştu.");
+                    }
+                });
+            }
+        }
+    </script>
+}
