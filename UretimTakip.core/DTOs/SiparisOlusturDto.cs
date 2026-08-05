@@ -7,6 +7,7 @@ namespace UretimTakip.core.DTOs
     public class SiparisOlusturDto
     {
         public Guid CariId { get; set; }
+        public Guid DepoId { get; set; }
         public string SiparisNumarasi { get; set; } = string.Empty;
         public DateTime SiparisTarihi { get; set; } = DateTime.Now;
         public List<SiparisDetayDto> Detaylar { get; set; } = new List<SiparisDetayDto>();

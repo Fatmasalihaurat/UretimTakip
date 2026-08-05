@@ -58,6 +58,14 @@
                             </div>
                         </div>
                     </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Çıkış Yapılacak Depo</label>
+                            <select id="ddlSiparisDepo" class="form-select" required>
+                                <option value="">⏳ Depolar yükleniyor...</option>
+                            </select>
+                        </div>
+                    </div>
 
                     <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
                         <h5 class="fw-bold text-secondary mb-0">📦 Sipariş Edilen Ürünler</h5>
@@ -161,6 +169,68 @@
     </div>
 </div>
 
+<!-- Sipariş Detay Modalı -->
+<div class="modal fade" id="siparisDetayModal" tabindex="-1" aria-labelledby="siparisDetayModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title fw-bold" id="siparisDetayModalLabel">🔍 Sipariş Detayları</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1 text-muted small"><strong>Sipariş Numarası:</strong></p>
+                        <h5 class="fw-bold text-dark" id="lblDetaySiparisNo">-</h5>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <p class="mb-1 text-muted small"><strong>Sipariş Tarihi:</strong></p>
+                        <h5 class="fw-bold text-dark" id="lblDetayTarih">-</h5>
+                    </div>
+                </div>
+                <hr />
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <p class="mb-1 text-muted small"><strong>Müşteri (Cari) Bilgileri:</strong></p>
+                        <h6 class="fw-semibold text-secondary" id="lblDetayCariAdi">-</h6>
+                        <span class="badge bg-light text-dark border" id="lblDetayCariKodu">-</span>
+                    </div>
+                </div>
+                
+                <h5 class="fw-bold text-secondary mt-4 mb-2">📦 Sipariş Kalemleri</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ürün Kodu</th>
+                                <th>Ürün Adı</th>
+                                <th class="text-center" style="width: 15%;">Miktar</th>
+                                <th class="text-end" style="width: 20%;">Birim Fiyat</th>
+                                <th class="text-end" style="width: 25%;">Satır Toplamı</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detayUrunlerTabloGovdesi">
+                            <!-- JS tarafından doldurulacak -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="4" class="text-end">Genel Toplam:</th>
+                                <th class="text-end text-primary fw-bold fs-5" id="lblDetayGenelToplam">0,00 TL</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary fw-semibold" onclick="faturaYazdir()">
+                    🖨️ Faturayı PDF Olarak Yazdır
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         var urunlerListesi = []; // Dropdown ve pop-up için global ürün listesi
@@ -171,6 +241,7 @@
             siparisleriGetir();
             carileriGetir();
             urunleriGetir();
+            depolariGetir();
         });
 
         // 1. SİPARİŞLERİ LİSTELE
@@ -190,7 +261,8 @@
                                         <td class="fw-semibold text-primary">${item.toplamTutar.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
                                         <td><span class="badge bg-warning text-dark">${item.durum}</span></td>
                                         <td class="text-end pe-4">
-                                            <button class="btn btn-sm btn-outline-danger py-1" onclick="siparisSil('${item.siparisId}')">🗑️ Sil</button>
+                                            <button class="btn btn-sm btn-outline-info py-1 me-1" onclick="siparisDetayModaliniAc('${item.siparisId}')">🔍 Detay</button>
+                                            <button class="btn btn-sm btn-outline-danger py-1" onclick="siparisSil('${item.siparisId}')">🗑️ İptal Et</button>
                                         </td>
                                      </tr>`;
                         });
@@ -234,6 +306,31 @@
                 }
             });
         }
+        //3.1 DEPOLARI GETİR VE AÇILIR LİSTEYE DOLDUR
+        function depolariGetir(){
+            $.ajax({ // <-- Eksik olan bu satırı ekledik
+                url: '/Depo/DepolariListele',
+                type: 'GET',
+                dataType: 'json',
+                success: function (response) {
+                    if (response.isSuccess && response.data.length > 0) {
+                        var html = '<option value="">-- Çıkış Deposu Seçiniz --</option>';
+                        $.each(response.data, function (index, item) {
+                            var depoId = item.depoId || item.id;
+                            var depoAdi = item.depoAdi || item.ad;
+                            html += `<option value="${depoId}">${depoAdi}</option>`;
+                        });
+                        $('#ddlSiparisDepo').html(html);
+                    } else {
+                        $('#ddlSiparisDepo').html('<option value="">Sistemde depo bulunamadı!</option>');
+                    }
+                },
+                error: function () {
+                    $('#ddlSiparisDepo').html('<option value="">Depolar yüklenirken hata oluştu!</option>');
+                }
+            }); // <-- $.ajax'ı kapatan parantez
+        } // <-- depolariGetir() fonksiyonunu kapatan parantez
+
 
         // 4. CARİ SEÇİM MODALINI AÇ
         function cariSecimModaliniAc() {
@@ -418,6 +515,12 @@
                 return;
             }
 
+            var depoId = $('#ddlSiparisDepo').val();
+            if (!depoId) {
+                alert("Lütfen çıkış yapılacak bir depo seçiniz.");
+                return;
+            }
+
             var detaylar = [];
             var hata = false;
 
@@ -441,8 +544,9 @@
 
             if (hata) return;
 
-            var siparisData = {
+            var siparisData  ={
                 CariId: cariId,
+                DepoId: depoId,
                 SiparisTarihi: new Date().toISOString(),
                 Detaylar: detaylar
             };
@@ -486,6 +590,60 @@
                         alert("Sipariş iptal edilirken bir hata oluştu.");
                     }
                 });
+            }
+        }
+
+        var seciliSiparisIdForFatura = null;
+
+        // 16. SİPARİŞ DETAY MODALINI AÇ VE BİLGİLERİ GETİR
+        function siparisDetayModaliniAc(id) {
+            seciliSiparisIdForFatura = id;
+            $.ajax({
+                url: '/Siparis/SiparisDetayGetir',
+                type: 'GET',
+                data: { id: id },
+                success: function (response) {
+                    if (response.isSuccess) {
+                        var siparis = response.data.siparis;
+                        var detaylar = response.data.detaylar;
+
+                        // Modal başlık ve cari bilgilerini doldur
+                        $('#lblDetaySiparisNo').text(siparis.siparisNumarasi);
+                        $('#lblDetayTarih').text(siparis.siparisTarihi);
+                        $('#lblDetayCariAdi').text(siparis.cariAdi);
+                        $('#lblDetayCariKodu').text("Cari Kodu: " + (siparis.cariKodu || '-'));
+
+                        // Kalemleri doldur
+                        var html = '';
+                        $.each(detaylar, function (index, item) {
+                            html += `<tr>
+                                        <td><span class="badge bg-light text-dark border">${item.urunKodu}</span></td>
+                                        <td class="fw-semibold">${item.urunAdi}</td>
+                                        <td class="text-center">${item.miktar}</td>
+                                        <td class="text-end">${item.birimFiyat.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+                                        <td class="text-end fw-semibold text-dark">${item.satirToplam.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+                                     </tr>`;
+                        });
+
+                        $('#detayUrunlerTabloGovdesi').html(html);
+                        $('#lblDetayGenelToplam').text(siparis.toplamTutar.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }));
+
+                        $('#siparisDetayModal').modal('show');
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function () {
+                    alert("Sipariş detayları yüklenirken bir hata oluştu.");
+                }
+            });
+        }
+
+        // 17. FATURA YAZDIRMA FONKSİYONU
+        function faturaYazdir() {
+            if (seciliSiparisIdForFatura) {
+                // Fatura yazdırma sayfasını yeni sekmede açacağız
+                window.open('/Siparis/FaturaPdf?id=' + seciliSiparisIdForFatura, '_blank');
             }
         }
     </script>
