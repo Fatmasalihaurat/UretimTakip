@@ -5,9 +5,12 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold text-dark">📦 Ürün Yönetimi</h2>
-    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#urunEkleModal">
-        ➕ Yeni Ürün Ekle
-    </button>
+    <div class="d-flex gap-2">
+        <input type="text" id="txtArama" class="form-control" placeholder="🔍 İsim veya Kod ile ara..." style="width: 250px;">
+        <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#urunEkleModal">
+            ➕ Yeni Ürün Ekle
+        </button>
+    </div>
 </div>
 
 <div class="card shadow-sm border-0 mb-4">
@@ -65,17 +68,58 @@
     </div>
 </div>
 
+<!-- ÜRÜN DÜZENLE MODALI -->
+<div class="modal fade" id="urunDuzenleModal" tabindex="-1" aria-labelledby="urunDuzenleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold" id="urunDuzenleModalLabel">✏️ Ürün Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <form id="urunDuzenleFormu">
+                    <input type="hidden" id="txtDuzenleUrunId" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ürün Adı</label>
+                        <input type="text" class="form-control" id="txtDuzenleUrunAdi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ürün Kodu</label>
+                        <input type="text" class="form-control" id="txtDuzenleUrunKodu" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Birim Fiyat (TL)</label>
+                        <input type="number" step="0.01" class="form-control" id="txtDuzenleFiyat" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" id="btnUrunGuncelle" class="btn btn-warning fw-semibold">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         $(document).ready(function () {
             // Sayfa açıldığında ürünleri otomatik listele
             urunleriGetir();
 
+            // Arama kutusuna her harf girildiğinde ürünleri listelemeyi tetikliyoruz
+            $('#txtArama').on('keyup', function () {
+                urunleriGetir();
+            });
+
             // 1. ÜRÜNLERİ LİSTELEYEN AJAX FONKSİYONU
             function urunleriGetir() {
+                var aramaMetni = $('#txtArama').val(); // Arama kutusundaki değeri alıyoruz
+
                 $.ajax({
                     url: '/Urun/UrunleriListele', // Arka plandaki action adresi
                     type: 'GET',
+                    data: { aramaParametresi: aramaMetni }, // Controller'a arama parametresini gönderiyoruz
                     dataType: 'json',
                     success: function (response) {
                         var html = '';
@@ -86,6 +130,7 @@
                                                 <td><span class="badge bg-light text-dark border">${item.urunKodu}</span></td>
                                                 <td>${item.fiyat.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
                                                 <td class="text-end pe-4">
+                                                    <button class="btn btn-sm btn-warning py-1 me-1" onclick="urunDuzenleGetir('${item.id}')">✏️ Düzenle</button>
                                                     <button class="btn btn-sm btn-danger py-1" onclick="urunSil('${item.id}')">🗑️ Sil</button>
                                                 </td>
                                              </tr>`;
@@ -161,6 +206,64 @@
                     });
                 }
             };
+
+            // 4. ÜRÜN DÜZENLEME İÇİN BİLGİLERİ GETİREN AKSİYON
+            window.urunDuzenleGetir = function (id) {
+                $.ajax({
+                    url: '/Urun/UrunGetir',
+                    type: 'GET',
+                    data: { id: id },
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            $('#txtDuzenleUrunId').val(response.data.id);
+                            $('#txtDuzenleUrunAdi').val(response.data.ad);
+                            $('#txtDuzenleUrunKodu').val(response.data.urunKodu);
+                            $('#txtDuzenleFiyat').val(response.data.fiyat);
+                            $('#urunDuzenleModal').modal('show');
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Ürün bilgileri getirilirken bir hata oluştu!');
+                    }
+                });
+            };
+
+            // 5. ÜRÜN GÜNCELLEME AKSİYONU
+            $('#btnUrunGuncelle').click(function () {
+                var model = {
+                    Id: $('#txtDuzenleUrunId').val(),
+                    Ad: $('#txtDuzenleUrunAdi').val(),
+                    UrunKodu: $('#txtDuzenleUrunKodu').val(),
+                    Fiyat: parseFloat($('#txtDuzenleFiyat').val())
+                };
+
+                if (!model.Ad || !model.UrunKodu || isNaN(model.Fiyat)) {
+                    alert('Lütfen tüm alanları eksiksiz doldurun!');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Urun/UrunGuncelle',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(model),
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            $('#urunDuzenleModal').modal('hide');
+                            urunleriGetir();
+                            alert(response.message);
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                    }
+                });
+            });
+
         });
     </script>
 }

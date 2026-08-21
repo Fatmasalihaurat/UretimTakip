@@ -36,6 +36,9 @@ namespace UretimTakip.Web.Controllers
         [HttpPost]
         public IActionResult CariEkle([FromBody] Cari yeniCari)
         {
+            //return JSON(cariservice.Add(yeniCari));
+
+
             try
             {
                 if(string.IsNullOrEmpty(yeniCari.Ad) || string.IsNullOrEmpty(yeniCari.CariKodu))
@@ -44,7 +47,9 @@ namespace UretimTakip.Web.Controllers
                 }
                 yeniCari.Id = Guid.NewGuid();
 
+                //carirepo.Add(yeniCari);
                 _context.Cariler.Add(yeniCari);
+                //caridepo.Savachanges();
                 _context.SaveChanges();
 
                 return Json(ResultDto.Success("Yeni cari başarıyla eklendi!"));
