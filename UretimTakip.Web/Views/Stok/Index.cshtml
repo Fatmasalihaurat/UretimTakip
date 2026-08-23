@@ -114,6 +114,8 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
+            var seciliDepoId = '@ViewBag.SeciliDepoId';
+
             // Sayfa yüklendiğinde stok verilerini otomatik getir
             stoklariGetir();
             // Dropdown listelerini (Ürün ve Depo) doldur
@@ -121,9 +123,13 @@
 
             // 1. Stokları Getirme Fonksiyonu (AJAX GET)
             function stoklariGetir() {
+                var urlParams = new URLSearchParams(window.location.search);
+                var depoId = urlParams.get('depoId') || seciliDepoId;
+
                 $.ajax({
                     url: '/Stok/StoklariListele',
                     type: 'GET',
+                    data: depoId ? { depoId: depoId } : null,
                     dataType: 'json',
                     success: function (response) {
                         var html = '';

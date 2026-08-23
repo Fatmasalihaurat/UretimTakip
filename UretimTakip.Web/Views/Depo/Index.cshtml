@@ -5,9 +5,12 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold text-dark">🏢 Depo Yönetimi</h2>
-    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#depoEkleModal">
-        ➕ Yeni Depo Ekle
-    </button>
+    <div class="d-flex gap-2">
+        <input type="text" id="txtArama" class="form-control" placeholder="🔍 İsim veya Kod ile ara..." style="width: 250px;">
+        <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#depoEkleModal">
+            ➕ Yeni Depo Ekle
+        </button>
+    </div>
 </div>
 
 <div class="card shadow-sm border-0 mb-4">
@@ -80,16 +83,68 @@
     </div>
 </div>
 
+<!-- Depo Düzenleme Modalı -->
+<div class="modal fade" id="depoDuzenleModal" tabindex="-1" aria-labelledby="depoDuzenleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold" id="depoDuzenleModalLabel">✏️ Depo Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <form id="depoDuzenleFormu">
+                    <input type="hidden" id="txtDuzenleDepoId" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Depo Adı</label>
+                        <input type="text" class="form-control" id="txtDuzenleDepoAdi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Depo Kodu</label>
+                        <input type="text" class="form-control" id="txtDuzenleDepoKodu" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Sorumlu Kişi</label>
+                        <input type="text" class="form-control" id="txtDuzenleSorumluKisi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Konum</label>
+                        <input type="text" class="form-control" id="txtDuzenleKonum" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">İrtibat Bilgisi</label>
+                        <input type="text" class="form-control" id="txtDuzenleIrtibatBilgisi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Adres</label>
+                        <textarea class="form-control" id="txtDuzenleAdres" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" id="btnDepoGuncelle" class="btn btn-warning fw-semibold">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         $(document).ready(function() {
             depolariGetir();
 
+            $('#txtArama').on('keyup', function () {
+                depolariGetir();
+            });
+
             // 1. Depoları Listeleme AJAX Fonksiyonu
             function depolariGetir() {
+                var aramaMetni = $('#txtArama').val();
+
                 $.ajax({
                     url: '/Depo/DepolariListele', 
                     type: 'GET',
+                    data: { aramaParametresi: aramaMetni },
                     dataType: 'json',
                     success: function (response) {
                         var html = '';
@@ -102,6 +157,8 @@
                                                 <td>${item.konum || '-'}</td>
                                                 <td>${item.irtibatBilgisi || '-'}</td>
                                                 <td class="text-end pe-4">
+                                                    <a href="/Stok/Index?depoId=${item.id}" class="btn btn-sm btn-info py-1 me-1 text-white">👁️ Stoklar</a>
+                                                    <button class="btn btn-sm btn-warning py-1 me-1" onclick="depoDuzenleGetir('${item.id}')">✏️ Düzenle</button>
                                                     <button class="btn btn-sm btn-danger py-1" onclick="depoSil('${item.id}')">🗑️ Sil</button>
                                                 </td>
                                              </tr>`;
@@ -178,6 +235,69 @@
                     });
                 }
             };
+
+            // 4. Depo Düzenleme İçin Bilgileri Getiren Aksiyon
+            window.depoDuzenleGetir = function (id) {
+                $.ajax({
+                    url: '/Depo/DepoGetir',
+                    type: 'GET',
+                    data: { id: id },
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            $('#txtDuzenleDepoId').val(response.data.id);
+                            $('#txtDuzenleDepoAdi').val(response.data.ad);
+                            $('#txtDuzenleDepoKodu').val(response.data.depoKodu);
+                            $('#txtDuzenleSorumluKisi').val(response.data.sorumluKisi);
+                            $('#txtDuzenleKonum').val(response.data.konum);
+                            $('#txtDuzenleIrtibatBilgisi').val(response.data.irtibatBilgisi);
+                            $('#txtDuzenleAdres').val(response.data.adres);
+                            $('#depoDuzenleModal').modal('show');
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Depo bilgileri getirilirken bir hata oluştu!');
+                    }
+                });
+            };
+
+            // 5. Depo Güncelleme Aksiyonu
+            $('#btnDepoGuncelle').click(function () {
+                var model = {
+                    Id: $('#txtDuzenleDepoId').val().trim(),
+                    Ad: $('#txtDuzenleDepoAdi').val().trim(),
+                    DepoKodu: $('#txtDuzenleDepoKodu').val().trim(),
+                    SorumluKisi: $('#txtDuzenleSorumluKisi').val().trim(),
+                    Konum: $('#txtDuzenleKonum').val().trim(),
+                    IrtibatBilgisi: $('#txtDuzenleIrtibatBilgisi').val().trim(),
+                    Adres: $('#txtDuzenleAdres').val().trim()
+                };
+
+                if (!model.Ad || !model.DepoKodu || !model.SorumluKisi || !model.Konum || !model.IrtibatBilgisi || !model.Adres) {
+                    alert('Lütfen tüm alanları eksiksiz doldurun!');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Depo/DepoGuncelle',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(model),
+                    success: function (response) {
+                        if (response.isSuccess) {
+                            $('#depoDuzenleModal').modal('hide');
+                            depolariGetir();
+                            alert(response.message);
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                    }
+                });
+            });
         });
     </script>
 }

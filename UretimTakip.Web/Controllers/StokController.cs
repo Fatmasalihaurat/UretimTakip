@@ -17,35 +17,43 @@ namespace UretimTakip.Web.Controllers
         }
 
         // Ana Stok Kontrol Sayfası
-        public IActionResult Index()
+        public IActionResult Index(Guid? depoId)
         {
+            ViewBag.SeciliDepoId = depoId;
             return View();
         }
 
         // Stokları Ürün ve Depo Adıyla Birlikte Getiren AJAX Metodu
         [HttpGet]
-        public IActionResult StoklariListele()
+        public IActionResult StoklariListele(Guid? depoId)
         {
             try
             {
                 // Stok nesnesinde IsDeleted [NotMapped] olarak tanımlı.
                 // Bu yüzden veritabanı düzeyinde stoktan IsDeleted araması yapamayız.
                 // Onun yerine, ilişkili ürün silinmemiş (!u.IsDeleted) ve depo arşivlenmemiş (!d.IsArchived) olan stokları getiriyoruz.
-                var stoklar = (from s in _context.Stoklar
-                               join u in _context.Urunler on s.UrunId equals u.UrunId
-                               join d in _context.Depolar on s.DepoId equals d.DepoId
-                               where !u.IsDeleted && !d.IsArchived
-                               select new
-                               {
-                                   StokId = s.StokId,
-                                   StokKodu = s.StokKodu,
-                                   UrunId = s.UrunId,
-                                   DepoId = s.DepoId,
-                                   UrunAdi = u.UrunAdi,
-                                   DepoAdi = d.DepoAdi,
-                                   Miktar = s.Miktar,
-                                   SonGuncellenmeTarihi = s.SonGuncellenmeTarihi.ToString("dd.MM.yyyy HH:mm")
-                               }).ToList();
+                var sorgu = from s in _context.Stoklar
+                            join u in _context.Urunler on s.UrunId equals u.UrunId
+                            join d in _context.Depolar on s.DepoId equals d.DepoId
+                            where !u.IsDeleted && !d.IsArchived
+                            select new { s, u, d };
+
+                if (depoId.HasValue)
+                {
+                    sorgu = sorgu.Where(x => x.s.DepoId == depoId.Value);
+                }
+
+                var stoklar = sorgu.ToList().Select(x => new
+                {
+                    StokId = x.s.StokId,
+                    StokKodu = x.s.StokKodu,
+                    UrunId = x.s.UrunId,
+                    DepoId = x.s.DepoId,
+                    UrunAdi = x.u.UrunAdi,
+                    DepoAdi = x.d.DepoAdi,
+                    Miktar = x.s.Miktar,
+                    SonGuncellenmeTarihi = x.s.SonGuncellenmeTarihi.ToString("dd.MM.yyyy HH:mm")
+                }).ToList();
 
                 return Json(ResultDto<object>.Success(stoklar, "Stoklar başarıyla getirildi."));
             }
