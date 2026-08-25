@@ -1,0 +1,184 @@
+@{
+    ViewData["Title"] = "Hedefler";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🎯 Hedef Yönetimi</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#hedefModal" onclick="hedefModalSifirla()">+ Yeni Hedef Ekle</button>
+</div>
+
+<div class="row" id="hedefListesi">
+    <!-- Hedef Kartları Buraya Gelecek -->
+</div>
+
+<!-- Hedef Ekle/Düzenle Modal -->
+<div class="modal fade" id="hedefModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="hedefModalBaslik">Yeni Hedef</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="hedefId" />
+                <div class="mb-3">
+                    <label class="form-label">Başlık</label>
+                    <input type="text" class="form-control" id="hedefBaslik" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Hedeflenen Tutar</label>
+                    <input type="number" step="0.01" class="form-control" id="hedefTutar" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Mevcut Tutar</label>
+                    <input type="number" step="0.01" class="form-control" id="mevcutTutar" required />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="hedefKaydet()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Silme Onay Modal -->
+<div class="modal fade" id="silModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">⚠️ Hedef Sil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bu hedefi silmek istediğinize emin misiniz?</p>
+                <input type="hidden" id="silinecekHedefId" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-danger" onclick="hedefSil()">Sil</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            hedefListele();
+        });
+
+        function hedefListele() {
+            $.get('/Hedef/HedefleriListele', function (res) {
+                var container = $('#hedefListesi');
+                container.empty();
+
+                if (res.isSuccess && res.data.length > 0) {
+                    res.data.forEach(function (hedef) {
+                        var bgClass = hedef.tamamlandiMi ? 'bg-success' : 'bg-primary';
+                        var card = `
+                            <div class="col-md-4 mb-3">
+                                <div class="card shadow-sm h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h5 class="card-title m-0">${hedef.baslik}</h5>
+                                            ${hedef.tamamlandiMi ? '<span class="badge bg-success">Tamamlandı</span>' : ''}
+                                        </div>
+                                        <p class="text-muted small">
+                                            Mevcut: ${hedef.mevcutTutar.toFixed(2)} / Hedef: ${hedef.hedeflenenTutar.toFixed(2)}
+                                        </p>
+                                        <div class="progress mb-3" style="height: 20px;">
+                                            <div class="progress-bar ${bgClass}" role="progressbar" style="width: ${hedef.ilerlemeYuzdesi}%;" aria-valuenow="${hedef.ilerlemeYuzdesi}" aria-valuemin="0" aria-valuemax="100">${hedef.ilerlemeYuzdesi}%</div>
+                                        </div>
+                                        <div class="d-flex justify-content-end">
+                                            <button class="btn btn-sm btn-outline-primary me-2" onclick="hedefDuzenleAc('${hedef.hedefId}')">Düzenle</button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="hedefSilAc('${hedef.hedefId}')">Sil</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.append(card);
+                    });
+                } else {
+                    container.append(`
+                        <div class="col-12 text-center text-muted py-5">
+                            <h4>Henüz bir hedef eklenmemiş.</h4>
+                            <p>İlk hedefinizi oluşturmak için "Yeni Hedef Ekle" butonuna tıklayın.</p>
+                        </div>
+                    `);
+                }
+            });
+        }
+
+        function hedefModalSifirla() {
+            $('#hedefId').val('');
+            $('#hedefBaslik').val('');
+            $('#hedefTutar').val('');
+            $('#mevcutTutar').val('0');
+            $('#hedefModalBaslik').text('Yeni Hedef Ekle');
+        }
+
+        function hedefDuzenleAc(id) {
+            $.get('/Hedef/HedefGetir/' + id, function (res) {
+                if (res.isSuccess) {
+                    $('#hedefId').val(res.data.hedefId);
+                    $('#hedefBaslik').val(res.data.baslik);
+                    $('#hedefTutar').val(res.data.hedeflenenTutar);
+                    $('#mevcutTutar').val(res.data.mevcutTutar);
+                    $('#hedefModalBaslik').text('Hedefi Düzenle');
+                    $('#hedefModal').modal('show');
+                } else {
+                    alert(res.message);
+                }
+            });
+        }
+
+        function hedefKaydet() {
+            var data = {
+                Baslik: $('#hedefBaslik').val(),
+                HedeflenenTutar: parseFloat($('#hedefTutar').val()),
+                MevcutTutar: parseFloat($('#mevcutTutar').val())
+            };
+
+            var id = $('#hedefId').val();
+            var url = id ? '/Hedef/HedefGuncelle' : '/Hedef/HedefEkle';
+
+            if (id) {
+                data.HedefId = id;
+            }
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.isSuccess) {
+                        $('#hedefModal').modal('hide');
+                        hedefListele();
+                    } else {
+                        alert(res.message);
+                    }
+                }
+            });
+        }
+
+        function hedefSilAc(id) {
+            $('#silinecekHedefId').val(id);
+            $('#silModal').modal('show');
+        }
+
+        function hedefSil() {
+            var id = $('#silinecekHedefId').val();
+            $.post('/Hedef/HedefSil/' + id, function (res) {
+                if (res.isSuccess) {
+                    $('#silModal').modal('hide');
+                    hedefListele();
+                } else {
+                    alert(res.message);
+                }
+            });
+        }
+    </script>
+}

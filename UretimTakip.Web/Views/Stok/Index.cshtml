@@ -5,9 +5,12 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold text-dark">📊 Stok Kontrolü</h2>
-    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#stokEkleModal">
-        ➕ Yeni Stok Tanımla
-    </button>
+    <div class="d-flex gap-3">
+        <input type="text" id="txtArama" class="form-control shadow-sm" placeholder="🔍 Ürün veya Stok Kodu Ara..." style="min-width: 250px;">
+        <button class="btn btn-primary fw-semibold shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#stokEkleModal">
+            ➕ Yeni Stok Tanımla
+        </button>
+    </div>
 </div>
 
 <div class="card shadow-sm border-0 mb-4">
@@ -98,8 +101,25 @@
                         <input type="text" class="form-control bg-light" id="lblUrunAdi" disabled />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Yeni Stok Miktarı</label>
-                        <input type="number" class="form-control" id="txtYeniMiktar" min="0" required placeholder="Örn: 100">
+                        <label class="form-label fw-semibold">Mevcut Stok Miktarı</label>
+                        <input type="number" class="form-control bg-light" id="txtMevcutMiktar" disabled />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">İşlem Türü</label>
+                        <div class="d-flex gap-3 mt-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="islemTuru" id="rdEkle" value="ekle" checked>
+                                <label class="form-check-label text-success fw-bold" for="rdEkle">➕ Stok Ekle</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="islemTuru" id="rdCikar" value="cikar">
+                                <label class="form-check-label text-danger fw-bold" for="rdCikar">➖ Stok Çıkar</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">İşlem Miktarı</label>
+                        <input type="number" class="form-control" id="txtIslemMiktari" min="0" required placeholder="Örn: 10">
                     </div>
                 </form>
             </div>
@@ -125,11 +145,12 @@
             function stoklariGetir() {
                 var urlParams = new URLSearchParams(window.location.search);
                 var depoId = urlParams.get('depoId') || seciliDepoId;
+                var aramaKelimesi = $('#txtArama').val();
 
                 $.ajax({
                     url: '/Stok/StoklariListele',
                     type: 'GET',
-                    data: depoId ? { depoId: depoId } : null,
+                    data: { depoId: depoId, aramaKelimesi: aramaKelimesi },
                     dataType: 'json',
                     success: function (response) {
                         var html = '';
@@ -142,9 +163,10 @@
                                             <td><span class="fw-bold text-primary">${item.miktar} Adet</span></td>
                                             <td>${item.sonGuncellenmeTarihi || '-'}</td>
                                             <td class="text-end pe-4">
-                                                <button class="btn btn-sm btn-outline-primary py-1" onclick="stokGuncelleModalAc('${item.stokId}', '${item.depoAdi}', '${item.urunAdi}', ${item.miktar})">
+                                                <button class="btn btn-sm btn-outline-primary py-1 me-2" onclick="stokGuncelleModalAc('${item.stokId}', '${item.depoAdi}', '${item.urunAdi}', ${item.miktar})">
                                                     🔄 Güncelle
                                                 </button>
+                                                ${item.miktar === 0 ? `<button class="btn btn-sm btn-outline-danger py-1" onclick="stokSil('${item.stokId}')">🗑️ Sil</button>` : ''}
                                             </td>
                                          </tr>`;
                             });
@@ -232,12 +254,19 @@
                 });
             });
 
+            // Arama kutusu için anlık filtreleme
+            $('#txtArama').on('keyup', function () {
+                stoklariGetir();
+            });
+
             // 4. Güncelleme Modalı Açma Fonksiyonu
             window.stokGuncelleModalAc = function (stokId, depoAdi, urunAdi, mevcutMiktar) {
                 $('#hdnStokId').val(stokId);
                 $('#lblDepoAdi').val(depoAdi);
                 $('#lblUrunAdi').val(urunAdi);
-                $('#txtYeniMiktar').val(mevcutMiktar);
+                $('#txtMevcutMiktar').val(mevcutMiktar);
+                $('#txtIslemMiktari').val(''); // Temizle
+                $('#rdEkle').prop('checked', true); // Varsayılan Ekle
                 
                 // Modalı ekranda göster
                 $('#stokGuncelleModal').modal('show');
@@ -246,11 +275,24 @@
             // 5. Stok Miktarı Güncelleme Kaydetme Fonksiyonu (AJAX POST)
             $('#btnStokKaydet').click(function () {
                 var id = $('#hdnStokId').val();
-                var yeniMiktar = parseInt($('#txtYeniMiktar').val());
+                var mevcutMiktar = parseInt($('#txtMevcutMiktar').val());
+                var islemMiktari = parseInt($('#txtIslemMiktari').val());
+                var islemTuru = $('input[name="islemTuru"]:checked').val();
 
-                // Miktar alanı doğrulama
-                if (isNaN(yeniMiktar) || yeniMiktar < 0) {
-                    alert('Lütfen geçerli ve 0 veya daha büyük bir miktar girin!');
+                if (isNaN(islemMiktari) || islemMiktari < 0) {
+                    alert('Lütfen geçerli ve 0 veya daha büyük bir işlem miktarı girin!');
+                    return;
+                }
+
+                var yeniMiktar = mevcutMiktar;
+                if (islemTuru === 'ekle') {
+                    yeniMiktar += islemMiktari;
+                } else if (islemTuru === 'cikar') {
+                    yeniMiktar -= islemMiktari;
+                }
+
+                if (yeniMiktar < 0) {
+                    alert('Stok miktarı 0\'dan küçük olamaz! Çıkarılacak miktar, mevcut stoktan fazla olamaz.');
                     return;
                 }
 
@@ -275,6 +317,28 @@
                     }
                 });
             });
+
+            // 6. Stok Silme Fonksiyonu (AJAX POST)
+            window.stokSil = function(stokId) {
+                if(confirm("Bu stok kaydını arşivlemek istediğinize emin misiniz?")) {
+                    $.ajax({
+                        url: '/Stok/StokSil',
+                        type: 'POST',
+                        data: { id: stokId },
+                        success: function (response) {
+                            if (response.isSuccess) {
+                                stoklariGetir();
+                                alert(response.message);
+                            } else {
+                                alert('Hata: ' + response.message);
+                            }
+                        },
+                        error: function () {
+                            alert('Silme işlemi sırasında sunucu hatası oluştu!');
+                        }
+                    });
+                }
+            }
         });
     </script>
 }

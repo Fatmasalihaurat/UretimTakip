@@ -1,0 +1,101 @@
+@{
+    ViewData["Title"] = "Bildirimler";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🔔 Bildirim Merkezi</h2>
+    <div>
+        <button class="btn btn-outline-primary me-2" onclick="testButceUyarisi()">Test: Bütçe Uyarısı Oluştur</button>
+        <button class="btn btn-primary" onclick="tumunuOkunduYap()">Tümünü Okundu Yap</button>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <ul class="list-group list-group-flush" id="bildirimListesi">
+            <!-- Bildirimler buraya eklenecek -->
+        </ul>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            bildirimleriListele();
+        });
+
+        function bildirimleriListele() {
+            $.get('/Bildirim/BildirimleriListele', function (res) {
+                var container = $('#bildirimListesi');
+                container.empty();
+
+                if (res.isSuccess && res.data.length > 0) {
+                    res.data.forEach(function (b) {
+                        var bg = b.okunduMu ? 'bg-light' : 'bg-white';
+                        var fw = b.okunduMu ? '' : 'fw-bold';
+                        
+                        var item = `
+                            <li class="list-group-item d-flex justify-content-between align-items-center ${bg} p-3">
+                                <div>
+                                    <h6 class="mb-1 ${fw}">${b.baslik}</h6>
+                                    <p class="mb-1 text-muted">${b.mesaj}</p>
+                                    <small class="text-secondary">${new Date(b.olusturulmaTarihi).toLocaleString('tr-TR')}</small>
+                                </div>
+                                <div>
+                                    ${!b.okunduMu ? `<button class="btn btn-sm btn-outline-success me-2" onclick="okunduYap('${b.bildirimId}')">Okundu</button>` : ''}
+                                    <button class="btn btn-sm btn-outline-danger" onclick="bildirimSil('${b.bildirimId}')">Sil</button>
+                                </div>
+                            </li>
+                        `;
+                        container.append(item);
+                    });
+                } else {
+                    container.append(`
+                        <li class="list-group-item text-center text-muted py-5">
+                            Hiç bildiriminiz yok.
+                        </li>
+                    `);
+                }
+            });
+        }
+
+        function okunduYap(id) {
+            $.post('/Bildirim/OkunduYap/' + id, function (res) {
+                if (res.isSuccess) {
+                    bildirimleriListele();
+                    if(typeof loadUnreadCount === 'function') loadUnreadCount();
+                }
+            });
+        }
+
+        function tumunuOkunduYap() {
+            $.post('/Bildirim/TumunuOkunduYap', function (res) {
+                if (res.isSuccess) {
+                    bildirimleriListele();
+                    if(typeof loadUnreadCount === 'function') loadUnreadCount();
+                }
+            });
+        }
+
+        function bildirimSil(id) {
+            if(confirm("Bildirimi silmek istediğinize emin misiniz?")) {
+                $.post('/Bildirim/BildirimSil/' + id, function (res) {
+                    if (res.isSuccess) {
+                        bildirimleriListele();
+                        if(typeof loadUnreadCount === 'function') loadUnreadCount();
+                    }
+                });
+            }
+        }
+
+        function testButceUyarisi() {
+            $.post('/Bildirim/ButceUyarisiOlustur', function (res) {
+                if(res.isSuccess) {
+                    bildirimleriListele();
+                    if(typeof loadUnreadCount === 'function') loadUnreadCount();
+                    alert("Bütçe uyarısı oluşturuldu!");
+                }
+            });
+        }
+    </script>
+}

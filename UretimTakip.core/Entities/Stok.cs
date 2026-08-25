@@ -24,7 +24,6 @@ namespace UretimTakip.core.Entities
         [NotMapped]
         public int Adet { get => Miktar; set => Miktar = value; }
 
-        [NotMapped]
         public bool IsDeleted { get; set; }
 
         [NotMapped]

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using UretimTakip.DataAccess.Context;
 
@@ -11,9 +12,11 @@ using UretimTakip.DataAccess.Context;
 namespace UretimTakip.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260825185750_AddGoalsAndNotifications")]
+    partial class AddGoalsAndNotifications
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -107,7 +110,7 @@ namespace UretimTakip.DataAccess.Migrations
                             IsActive = true,
                             IsArchived = false,
                             Konum = "Eskişehir Tepebaşı",
-                            OlusturulmaTarihi = new DateTime(2026, 8, 25, 19, 18, 35, 498, DateTimeKind.Utc).AddTicks(2775),
+                            OlusturulmaTarihi = new DateTime(2026, 8, 25, 18, 57, 48, 803, DateTimeKind.Utc).AddTicks(2527),
                             SorumluKisi = ""
                         });
                 });
@@ -211,9 +214,6 @@ namespace UretimTakip.DataAccess.Migrations
                     b.Property<Guid>("DepoId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
                     b.Property<int>("Miktar")
                         .HasColumnType("int");
 
@@ -243,10 +243,9 @@ namespace UretimTakip.DataAccess.Migrations
                         {
                             StokId = new Guid("11223344-5566-7788-9900-aabbccddeeff"),
                             DepoId = new Guid("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"),
-                            IsDeleted = false,
                             Miktar = 50,
-                            OlusturulmaTarihi = new DateTime(2026, 8, 25, 19, 18, 35, 498, DateTimeKind.Utc).AddTicks(3327),
-                            SonGuncellenmeTarihi = new DateTime(2026, 8, 25, 19, 18, 35, 498, DateTimeKind.Utc).AddTicks(3321),
+                            OlusturulmaTarihi = new DateTime(2026, 8, 25, 18, 57, 48, 803, DateTimeKind.Utc).AddTicks(2947),
+                            SonGuncellenmeTarihi = new DateTime(2026, 8, 25, 18, 57, 48, 803, DateTimeKind.Utc).AddTicks(2942),
                             StokKodu = "",
                             UrunId = new Guid("f6e5d4c3-b2a1-0f9e-8d7c-6b5a4f3db1ba")
                         });
@@ -345,7 +344,7 @@ namespace UretimTakip.DataAccess.Migrations
                             Marka = "Apple",
                             Model = "iPhone 15",
                             OlcuBirimi = "",
-                            OlusturulmaTarihi = new DateTime(2026, 8, 25, 19, 18, 35, 498, DateTimeKind.Utc).AddTicks(3242),
+                            OlusturulmaTarihi = new DateTime(2026, 8, 25, 18, 57, 48, 803, DateTimeKind.Utc).AddTicks(2874),
                             SistemUrunKodu = "TEL-001",
                             UrunAdi = "Akıllı Telefon",
                             Uzunluk = 0.0,
