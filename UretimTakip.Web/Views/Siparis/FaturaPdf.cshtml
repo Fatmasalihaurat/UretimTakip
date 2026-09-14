@@ -135,7 +135,9 @@
         <div class="col-6 text-end">
             <div class="info-label">FATURA TARİHİ</div>
             <div class="info-value">@Model.SiparisTarihi.ToString("dd.MM.yyyy HH:mm")</div>
-            <div class="info-label mt-3">SİPARİŞ DURUMU</div>
+            <div class="info-label mt-2">ÇIKIŞ DEPOSU</div>
+            <div class="info-value">@Model.DepoAdi</div>
+            <div class="info-label mt-2">SİPARİŞ DURUMU</div>
             <div>
                 <span class="badge bg-success text-white badge-invoice">@Model.Durum</span>
             </div>

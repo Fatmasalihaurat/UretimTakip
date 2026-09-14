@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace UretimTakip.core.Entities
@@ -9,6 +9,7 @@ namespace UretimTakip.core.Entities
         public Guid SiparisId { get; set; } = Guid.NewGuid();
         public string SiparisNumarasi { get; set; } = string.Empty;
         public Guid CariId { get; set; } = Guid.NewGuid();
+        public Guid? DepoId { get; set; }
         public DateTime SiparisTarihi { get; set; } = DateTime.Now;
         public  decimal ToplamTutar { get; set; }
         public string Durum { get; set; } = "Bekliyor";

@@ -23,7 +23,7 @@ namespace UretimTakip.Web.Controllers
             return View();
         }
 
-        // 2. Siparişleri AJAX ile listelemek için GET metodu (Join kullanarak Cari adıyla birlikte)
+        // 2. Siparişleri AJAX ile listelemek için GET metodu (Join kullanarak Cari ve Depo adıyla birlikte)
         [HttpGet]
         public IActionResult SiparisleriListele()
         {
@@ -31,6 +31,8 @@ namespace UretimTakip.Web.Controllers
             {
                 var siparisler = (from s in _context.Siparisler
                                   join c in _context.Cariler on s.CariId equals c.Id
+                                  join d in _context.Depolar on s.DepoId equals d.DepoId into depogroup
+                                  from d in depogroup.DefaultIfEmpty()
                                   where !s.IsDeleted
                                   select new
                                   {
@@ -38,6 +40,7 @@ namespace UretimTakip.Web.Controllers
                                       SiparisNumarasi = s.SiparisNumarasi,
                                       CariId = s.CariId,
                                       CariAdi = c.Ad,
+                                      DepoAdi = d != null ? d.DepoAdi : "Merkez Depo",
                                       SiparisTarihi = s.SiparisTarihi.ToString("dd.MM.yyyy HH:mm"),
                                       ToplamTutar = s.ToplamTutar,
                                       Durum = s.Durum
@@ -82,6 +85,7 @@ namespace UretimTakip.Web.Controllers
                 {
                     SiparisId = Guid.NewGuid(),
                     CariId = dto.CariId,
+                    DepoId = dto.DepoId, // Çıkış yapılan deponun ID'sini saklıyoruz
                     SiparisNumarasi = otomatikSiparisNo, // Sistem tarafından üretilen sipariş numarası
                     SiparisTarihi = dto.SiparisTarihi,
                     // Detay listesindeki (Miktar * BirimFiyat) değerlerini toplayarak ToplamTutarı hesaplıyoruz
@@ -96,8 +100,8 @@ namespace UretimTakip.Web.Controllers
                 // Sipariş Detay Satırlarını (Detail) Döngüyle Ekleme
                 foreach (var detayDto in dto.Detaylar)
                 {
-                    // 1. Seçilen depo ve ürüne ait stok kaydını veritabanından sorgula
-                    var stok = _context.Stoklar.FirstOrDefault(s => s.DepoId == dto.DepoId && s.UrunId == detayDto.UrunId);
+                    // 1. Seçilen depo ve ürüne ait aktif stok kaydını veritabanından sorgula
+                    var stok = _context.Stoklar.FirstOrDefault(s => s.DepoId == dto.DepoId && s.UrunId == detayDto.UrunId && !s.IsDeleted);
 
                     // 2. Stok kaydı hiç yoksa hata fırlat (Ürün adını göstermek için önce ürünü çekiyoruz)
                     if (stok == null)
@@ -148,9 +152,12 @@ namespace UretimTakip.Web.Controllers
                 return Json(ResultDto.Failure("Sipariş oluşturulurken bir hata meydana geldi: " + ex.Message));
             }
         }
+
+        // Siparişi İptal Eden ve Stokları Depoya İade Eden POST Metodu
         [HttpPost]
         public IActionResult SiparisSil(Guid id)
         {
+            using var transaction = _context.Database.BeginTransaction();
             try
             {
                 var siparis = _context.Siparisler.FirstOrDefault(s => s.SiparisId == id);
@@ -160,22 +167,66 @@ namespace UretimTakip.Web.Controllers
                     return Json(ResultDto.Failure("Sipariş bulunamadı!"));
                 }
 
-                // Siparişin kendisini soft-delete yapıyoruz
-                siparis.IsDeleted = true;
-
-                // Siparişe bağlı tüm kalemleri (detayları) de soft-delete yapıyoruz
-                var detaylar = _context.SiparislerDetaylar.Where(d => d.SiparisId == id).ToList();
-                foreach (var detay in detaylar)
+                if (siparis.IsDeleted)
                 {
-                    detay.IsDeleted = true;
+                    return Json(ResultDto.Failure("Bu sipariş zaten daha önce iptal edilmiş!"));
                 }
 
-                _context.SaveChanges();
+                // Siparişe bağlı tüm aktif kalemleri (detayları) çekiyoruz
+                var detaylar = _context.SiparislerDetaylar.Where(d => d.SiparisId == id && !d.IsDeleted).ToList();
 
-                return Json(ResultDto.Success("Sipariş başarıyla iptal edildi!"));
+                // Eğer siparişin çıkış yapıldığı depo tanımlıysa, kalemlerdeki miktarları stoğa geri iade ediyoruz
+                if (siparis.DepoId.HasValue)
+                {
+                    foreach (var detay in detaylar)
+                    {
+                        var stok = _context.Stoklar.FirstOrDefault(s => s.DepoId == siparis.DepoId.Value && s.UrunId == detay.UrunId);
+                        if (stok != null)
+                        {
+                            stok.Miktar += detay.Miktar;
+                            stok.IsDeleted = false; // Silinmişse de tekrar aktifleştir
+                            stok.SonGuncellenmeTarihi = DateTime.UtcNow;
+                        }
+                        else
+                        {
+                            // Eğer o depoda stok kaydı hiç kalmamışsa yeni stok kaydı oluşturarak stoğu iade ediyoruz
+                            var yeniStok = new Stok
+                            {
+                                StokId = Guid.NewGuid(),
+                                DepoId = siparis.DepoId.Value,
+                                UrunId = detay.UrunId,
+                                Miktar = detay.Miktar,
+                                IsDeleted = false,
+                                OlusturulmaTarihi = DateTime.UtcNow,
+                                SonGuncellenmeTarihi = DateTime.UtcNow
+                            };
+                            _context.Stoklar.Add(yeniStok);
+                        }
+
+                        // Detayı iptal (silindi) yapıyoruz
+                        detay.IsDeleted = true;
+                    }
+                }
+                else
+                {
+                    foreach (var detay in detaylar)
+                    {
+                        detay.IsDeleted = true;
+                    }
+                }
+
+                // Siparişin kendisini soft-delete yapıp Durumunu 'İptal Edildi' yapıyoruz
+                siparis.IsDeleted = true;
+                siparis.Durum = "İptal Edildi";
+
+                _context.SaveChanges();
+                transaction.Commit();
+
+                return Json(ResultDto.Success("Sipariş başarıyla iptal edildi ve ürünler depoya iade edildi!"));
             }
             catch (Exception ex)
             {
+                transaction.Rollback();
                 return Json(ResultDto.Failure("Sipariş iptal edilirken hata oluştu: " + ex.Message));
             }
         }
@@ -186,9 +237,11 @@ namespace UretimTakip.Web.Controllers
         {
             try
             {
-                // Sipariş bilgilerini ve cari adını alalım
+                // Sipariş bilgilerini, cari adını ve depo adını alalım
                 var siparis = (from s in _context.Siparisler
                                join c in _context.Cariler on s.CariId equals c.Id
+                               join d in _context.Depolar on s.DepoId equals d.DepoId into depogroup
+                               from d in depogroup.DefaultIfEmpty()
                                where s.SiparisId == id && !s.IsDeleted
                                select new
                                {
@@ -198,6 +251,7 @@ namespace UretimTakip.Web.Controllers
                                    CariAdi = c.Ad,
                                    CariKodu = c.CariKodu,
                                    CariTuru = c.CariTuru,
+                                   DepoAdi = d != null ? d.DepoAdi : "Merkez Depo",
                                    SiparisTarihi = s.SiparisTarihi.ToString("dd.MM.yyyy HH:mm"),
                                    ToplamTutar = s.ToplamTutar,
                                    Durum = s.Durum
@@ -241,9 +295,11 @@ namespace UretimTakip.Web.Controllers
         {
             try
             {
-                // Sipariş ve Müşteri (Cari) bilgilerini alalım
+                // Sipariş, Müşteri (Cari) ve Depo bilgilerini alalım
                 var fatura = (from s in _context.Siparisler
                                join c in _context.Cariler on s.CariId equals c.Id
+                               join d in _context.Depolar on s.DepoId equals d.DepoId into depogroup
+                               from d in depogroup.DefaultIfEmpty()
                                where s.SiparisId == id && !s.IsDeleted
                                select new FaturaViewModel
                                {
@@ -251,6 +307,7 @@ namespace UretimTakip.Web.Controllers
                                    CariAdi = c.Ad,
                                    CariKodu = c.CariKodu,
                                    CariTuru = c.CariTuru,
+                                   DepoAdi = d != null ? d.DepoAdi : "Merkez Depo",
                                    SiparisTarihi = s.SiparisTarihi,
                                    ToplamTutar = s.ToplamTutar,
                                    Durum = s.Durum
@@ -289,6 +346,7 @@ namespace UretimTakip.Web.Controllers
         public string CariAdi { get; set; } = string.Empty;
         public string CariKodu { get; set; } = string.Empty;
         public string CariTuru { get; set; } = string.Empty;
+        public string DepoAdi { get; set; } = string.Empty;
         public DateTime SiparisTarihi { get; set; }
         public decimal ToplamTutar { get; set; }
         public string Durum { get; set; } = string.Empty;

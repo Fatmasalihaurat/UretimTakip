@@ -3,11 +3,24 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-dark">📦 Ürün Yönetimi</h2>
-    <div class="d-flex gap-2">
-        <input type="text" id="txtArama" class="form-control" placeholder="🔍 İsim veya Kod ile ara..." style="width: 250px;">
-        <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#urunEkleModal">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold text-dark mb-0">📦 Ürün Yönetimi</h2>
+        <small class="text-muted" id="sayfaAltBaslik">Aktif ürünler ve depolardaki toplam stok durumu</small>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <!-- Aktif / Arşiv Filtresi -->
+        <div class="btn-group shadow-sm" role="group">
+            <button type="button" class="btn btn-sm btn-primary active fw-semibold" id="btnAktifUrunler">
+                📦 Aktif Ürünler
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" id="btnArsivUrunler">
+                📁 Arşivdekiler
+            </button>
+        </div>
+
+        <input type="text" id="txtArama" class="form-control shadow-sm" placeholder="🔍 İsim veya Kod ile ara..." style="min-width: 220px;">
+        <button class="btn btn-primary fw-semibold shadow-sm text-nowrap" id="btnYeniUrunModalAc" data-bs-toggle="modal" data-bs-target="#urunEkleModal">
             ➕ Yeni Ürün Ekle
         </button>
     </div>
@@ -21,13 +34,14 @@
                     <tr>
                         <th class="ps-4">Ürün Adı</th>
                         <th>Ürün Kodu</th>
-                        <th>Fiyat</th>
+                        <th>Birim Fiyat</th>
+                        <th>Toplam Stok</th>
                         <th class="text-end pe-4">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody id="urunTabloGovdesi">
                     <tr>
-                        <td colspan="4" class="text-center text-muted py-4">
+                        <td colspan="5" class="text-center text-muted py-4">
                             ⏳ Ürünler yükleniyor...
                         </td>
                     </tr>
@@ -37,9 +51,10 @@
     </div>
 </div>
 
+<!-- YENİ ÜRÜN EKLE MODALI -->
 <div class="modal fade" id="urunEkleModal" tabindex="-1" aria-labelledby="urunEkleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content shadow">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold" id="urunEkleModalLabel">✨ Yeni Ürün Ekle</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
@@ -71,7 +86,7 @@
 <!-- ÜRÜN DÜZENLE MODALI -->
 <div class="modal fade" id="urunDuzenleModal" tabindex="-1" aria-labelledby="urunDuzenleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content shadow">
             <div class="modal-header bg-warning text-dark">
                 <h5 class="modal-title fw-bold" id="urunDuzenleModalLabel">✏️ Ürün Düzenle</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
@@ -104,8 +119,29 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
+            var arsivModu = false;
+
             // Sayfa açıldığında ürünleri otomatik listele
             urunleriGetir();
+
+            // Aktif / Arşiv filtre butonları
+            $('#btnAktifUrunler').click(function () {
+                arsivModu = false;
+                $(this).removeClass('btn-outline-primary').addClass('btn-primary active');
+                $('#btnArsivUrunler').removeClass('btn-secondary active').addClass('btn-outline-secondary');
+                $('#sayfaAltBaslik').text('Aktif ürünler ve depolardaki toplam stok durumu');
+                $('#btnYeniUrunModalAc').show();
+                urunleriGetir();
+            });
+
+            $('#btnArsivUrunler').click(function () {
+                arsivModu = true;
+                $(this).removeClass('btn-outline-secondary').addClass('btn-secondary active');
+                $('#btnAktifUrunler').removeClass('btn-primary active').addClass('btn-outline-primary');
+                $('#sayfaAltBaslik').text('Arşivlenen ürünler (Veritabanında saklanan pasif kayıtlar)');
+                $('#btnYeniUrunModalAc').hide();
+                urunleriGetir();
+            });
 
             // Arama kutusuna her harf girildiğinde ürünleri listelemeyi tetikliyoruz
             $('#txtArama').on('keyup', function () {
@@ -114,45 +150,96 @@
 
             // 1. ÜRÜNLERİ LİSTELEYEN AJAX FONKSİYONU
             function urunleriGetir() {
-                var aramaMetni = $('#txtArama').val(); // Arama kutusundaki değeri alıyoruz
+                var aramaMetni = $('#txtArama').val();
 
                 $.ajax({
-                    url: '/Urun/UrunleriListele', // Arka plandaki action adresi
+                    url: '/Urun/UrunleriListele',
                     type: 'GET',
-                    data: { aramaParametresi: aramaMetni }, // Controller'a arama parametresini gönderiyoruz
+                    data: { 
+                        aramaParametresi: aramaMetni,
+                        arsivdekiler: arsivModu 
+                    },
                     dataType: 'json',
                     success: function (response) {
                         var html = '';
                         if (response.isSuccess && response.data.length > 0) {
                             $.each(response.data, function (index, item) {
+                                // Stok rozeti belirleme
+                                var stokBadge = '';
+                                if (item.toplamStok > 0) {
+                                    stokBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success fw-bold px-2 py-1">
+                                                    📦 ${item.toplamStok} Adet
+                                                 </span>`;
+                                } else {
+                                    stokBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2 py-1">
+                                                    0 Adet (Stok Yok)
+                                                 </span>`;
+                                }
+
+                                // İşlem butonları belirleme
+                                var islemButonlari = '';
+                                if (!arsivModu) {
+                                    // Aktif Ürünler: Düzenle ve Stok Sıfırsa Sil
+                                    var silButonu = '';
+                                    if (item.toplamStok === 0) {
+                                        silButonu = `<button class="btn btn-sm btn-danger py-1" onclick="urunSil('${item.id}', '${item.ad}')" title="Ürünü Arşivle (Sil)">
+                                                        🗑️ Sil
+                                                     </button>`;
+                                    } else {
+                                        silButonu = `<button class="btn btn-sm btn-outline-danger py-1" onclick="urunSilEngelli('${item.ad}', ${item.toplamStok})" title="Stoğu bulunan ürün silinemez!">
+                                                        🚫 Sil
+                                                     </button>`;
+                                    }
+
+                                    islemButonlari = `
+                                        <button class="btn btn-sm btn-warning py-1 me-1 fw-semibold" onclick="urunDuzenleGetir('${item.id}')">✏️ Düzenle</button>
+                                        ${silButonu}
+                                    `;
+                                } else {
+                                    // Arşivdeki Ürünler: Geri Yükle butonu
+                                    islemButonlari = `
+                                        <button class="btn btn-sm btn-success py-1 fw-semibold" onclick="urunGeriYukle('${item.id}', '${item.ad}')" title="Ürünü tekrar aktif et">
+                                            ♻️ Arşivden Çıkar
+                                        </button>
+                                    `;
+                                }
+
                                 html += `<tr>
-                                                <td class="ps-4 fw-semibold">${item.ad}</td>
-                                                <td><span class="badge bg-light text-dark border">${item.urunKodu}</span></td>
-                                                <td>${item.fiyat.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
-                                                <td class="text-end pe-4">
-                                                    <button class="btn btn-sm btn-warning py-1 me-1" onclick="urunDuzenleGetir('${item.id}')">✏️ Düzenle</button>
-                                                    <button class="btn btn-sm btn-danger py-1" onclick="urunSil('${item.id}')">🗑️ Sil</button>
-                                                </td>
-                                             </tr>`;
+                                            <td class="ps-4 fw-semibold">${item.ad}</td>
+                                            <td><span class="badge bg-light text-dark border">${item.urunKodu}</span></td>
+                                            <td class="fw-semibold text-dark">${item.fiyat.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+                                            <td>${stokBadge}</td>
+                                            <td class="text-end pe-4">
+                                                ${islemButonlari}
+                                            </td>
+                                         </tr>`;
                             });
                         } else {
+                            var bosMesaj = arsivModu 
+                                ? "📁 Arşivde listelenecek ürün bulunamadı." 
+                                : "📂 Listelenecek aktif ürün bulunamadı.";
                             html = `<tr>
-                                            <td colspan="4" class="text-center text-muted py-4">📂 Listelenecek ürün bulunamadı.</td>
-                                        </tr>`;
+                                        <td colspan="5" class="text-center text-muted py-4">${bosMesaj}</td>
+                                    </tr>`;
                         }
                         $('#urunTabloGovdesi').html(html);
                     },
                     error: function () {
-                        $('#urunTabloGovdesi').html(`<tr><td colspan="4" class="text-center text-danger py-4">❌ Veriler yüklenirken bir hata oluştu!</td></tr>`);
+                        $('#urunTabloGovdesi').html(`<tr><td colspan="5" class="text-center text-danger py-4">❌ Veriler yüklenirken bir hata oluştu!</td></tr>`);
                     }
                 });
             }
 
+            // Stoğu sıfır olmayan ürünün silinmeye çalışılması durumunda gösterilen uyarı
+            window.urunSilEngelli = function (urunAdi, toplamStok) {
+                alert(`⚠️ Stoğu Olan Ürün Silinemez!\n\n"${urunAdi}" ürününe ait depolarda toplam ${toplamStok} adet stok bulunmaktadır.\n\nBir ürünü silebilmek için depolardaki stok miktarının sıfır (0) olması gerekir. Lütfen önce Stok Kontrolü sayfasından stoğu sıfırlayın veya arşivleyin.`);
+            };
+
             // 2. YENİ ÜRÜN EKLEYEN AJAX FONKSİYONU
             $('#btnUrunKaydet').click(function () {
                 var model = {
-                    Ad: $('#txtUrunAdi').val(),
-                    UrunKodu: $('#txtUrunKodu').val(),
+                    Ad: $('#txtUrunAdi').val().trim(),
+                    UrunKodu: $('#txtUrunKodu').val().trim(),
                     Fiyat: parseFloat($('#txtFiyat').val())
                 };
 
@@ -168,9 +255,9 @@
                     data: JSON.stringify(model),
                     success: function (response) {
                         if (response.isSuccess) {
-                            $('#urunEkleModal').modal('hide'); // Modalı kapat
-                            $('#urunEkleFormu')[0].reset(); // Formu temizle
-                            urunleriGetir(); // Tabloyu tazelemeyi tetikle
+                            $('#urunEkleModal').modal('hide');
+                            $('#urunEkleFormu')[0].reset();
+                            urunleriGetir();
                             alert(response.message);
                         } else {
                             alert('Hata: ' + response.message);
@@ -182,32 +269,53 @@
                 });
             });
 
-            // 3. ÜRÜN SİLME AKSİYONU
-            window.urunSil = function (id) {
-                // Kullanıcıya silme işlemi için teyit sorusu soruluyor
-                if (confirm('Bu ürünü silmek istediğinize emin misiniz?')) {
+            // 3. ÜRÜN SİLME AKSİYONU (Stok 0 ise arşivler)
+            window.urunSil = function (id, urunAdi) {
+                var onay = confirm(`"${urunAdi}" ürününü silmek istediğinize emin misiniz?\n\nℹ️ Not: Ürün sistemden ve veritabanından tamamen silinmeyecek, geçmiş sipariş ve fatura kayıtlarının korunması için veritabanında arşiv olarak saklanmaya devam edecektir.`);
+                if (onay) {
                     $.ajax({
-                        url: '/Urun/UrunSil', // İstek atılacak Controller/Action adresi
-                        type: 'POST',         // Veri değiştireceğimiz için POST metodu seçildi
-                        data: { id: id },     // Silinecek ürünün ID parametresi gönderiliyor
+                        url: '/Urun/UrunSil',
+                        type: 'POST',
+                        data: { id: id },
                         success: function (response) {
-                            // Backend'den başarılı yanıt geldiyse
                             if (response.isSuccess) {
-                                urunleriGetir(); // Tabloyu tazeleyerek silinen ürünü listeden kaldırıyoruz
-                                alert(response.message); // Kullanıcıya başarı mesajı gösteriliyor
+                                urunleriGetir();
+                                alert(response.message);
                             } else {
-                                alert('Hata: ' + response.message); // Backend'den gelen hata mesajı
+                                alert('Hata: ' + response.message);
                             }
                         },
                         error: function () {
-                            // Sunucu hatası veya ağ bağlantı sorunları durumunda çalışan kısım
                             alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
                         }
                     });
                 }
             };
 
-            // 4. ÜRÜN DÜZENLEME İÇİN BİLGİLERİ GETİREN AKSİYON
+            // 4. ÜRÜNÜ ARŞİVDEN GERİ YÜKLEME AKSİYONU
+            window.urunGeriYukle = function (id, urunAdi) {
+                var onay = confirm(`"${urunAdi}" ürününü arşivden çıkarıp tekrar aktif ürünler listesine dahil etmek istiyor musunuz?`);
+                if (onay) {
+                    $.ajax({
+                        url: '/Urun/UrunGeriYukle',
+                        type: 'POST',
+                        data: { id: id },
+                        success: function (response) {
+                            if (response.isSuccess) {
+                                urunleriGetir();
+                                alert(response.message);
+                            } else {
+                                alert('Hata: ' + response.message);
+                            }
+                        },
+                        error: function () {
+                            alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                        }
+                    });
+                }
+            };
+
+            // 5. ÜRÜN DÜZENLEME İÇİN BİLGİLERİ GETİREN AKSİYON
             window.urunDuzenleGetir = function (id) {
                 $.ajax({
                     url: '/Urun/UrunGetir',
@@ -230,12 +338,12 @@
                 });
             };
 
-            // 5. ÜRÜN GÜNCELLEME AKSİYONU
+            // 6. ÜRÜN GÜNCELLEME AKSİYONU
             $('#btnUrunGuncelle').click(function () {
                 var model = {
                     Id: $('#txtDuzenleUrunId').val(),
-                    Ad: $('#txtDuzenleUrunAdi').val(),
-                    UrunKodu: $('#txtDuzenleUrunKodu').val(),
+                    Ad: $('#txtDuzenleUrunAdi').val().trim(),
+                    UrunKodu: $('#txtDuzenleUrunKodu').val().trim(),
                     Fiyat: parseFloat($('#txtDuzenleFiyat').val())
                 };
 

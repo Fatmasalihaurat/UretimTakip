@@ -320,7 +320,7 @@
 
             // 6. Stok Silme Fonksiyonu (AJAX POST)
             window.stokSil = function(stokId) {
-                if(confirm("Bu stok kaydını arşivlemek istediğinize emin misiniz?")) {
+                if(confirm("Bu sıfır miktarlı stok kaydını arşivlemek istediğinize emin misiniz?\n\n(Not: İlgili ürün kaydı veritabanında arşiv ve genel katalog için korunmaya devam edecektir.)")) {
                     $.ajax({
                         url: '/Stok/StokSil',
                         type: 'POST',

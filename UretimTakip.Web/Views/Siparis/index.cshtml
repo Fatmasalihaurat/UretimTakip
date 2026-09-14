@@ -18,6 +18,7 @@
                     <tr>
                         <th class="ps-4">Sipariş Numarası</th>
                         <th>Müşteri (Cari)</th>
+                        <th>Çıkış Deposu</th>
                         <th>Sipariş Tarihi</th>
                         <th>Toplam Tutar</th>
                         <th>Durum</th>
@@ -26,7 +27,7 @@
                 </thead>
                 <tbody id="siparisTabloGovdesi">
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
+                        <td colspan="7" class="text-center text-muted py-4">
                             ⏳ Siparişler yükleniyor...
                         </td>
                     </tr>
@@ -190,10 +191,15 @@
                 </div>
                 <hr />
                 <div class="row mb-3">
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <p class="mb-1 text-muted small"><strong>Müşteri (Cari) Bilgileri:</strong></p>
-                        <h6 class="fw-semibold text-secondary" id="lblDetayCariAdi">-</h6>
+                        <h6 class="fw-semibold text-secondary mb-1" id="lblDetayCariAdi">-</h6>
                         <span class="badge bg-light text-dark border" id="lblDetayCariKodu">-</span>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <p class="mb-1 text-muted small"><strong>Çıkış Deposu:</strong></p>
+                        <h6 class="fw-semibold text-secondary mb-1" id="lblDetayDepoAdi">-</h6>
+                        <span class="badge bg-light text-primary border">🏢 Depo Çıkışlı</span>
                     </div>
                 </div>
                 
@@ -257,6 +263,7 @@
                             html += `<tr>
                                         <td class="ps-4 fw-semibold">${item.siparisNumarasi}</td>
                                         <td>${item.cariAdi}</td>
+                                        <td><span class="badge bg-light text-dark border">🏢 ${item.depoAdi || 'Merkez Depo'}</span></td>
                                         <td>${item.siparisTarihi}</td>
                                         <td class="fw-semibold text-primary">${item.toplamTutar.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
                                         <td><span class="badge bg-warning text-dark">${item.durum}</span></td>
@@ -268,7 +275,7 @@
                         });
                     } else {
                         html = `<tr>
-                                    <td colspan="6" class="text-center text-muted py-4">📂 Kayıtlı sipariş bulunamadı.</td>
+                                    <td colspan="7" class="text-center text-muted py-4">📂 Kayıtlı sipariş bulunamadı.</td>
                                  </tr>`;
                     }
                     $('#siparisTabloGovdesi').html(html);
@@ -612,6 +619,7 @@
                         $('#lblDetayTarih').text(siparis.siparisTarihi);
                         $('#lblDetayCariAdi').text(siparis.cariAdi);
                         $('#lblDetayCariKodu').text("Cari Kodu: " + (siparis.cariKodu || '-'));
+                        $('#lblDetayDepoAdi').text(siparis.depoAdi || 'Merkez Depo');
 
                         // Kalemleri doldur
                         var html = '';
