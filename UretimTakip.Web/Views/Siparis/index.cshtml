@@ -3,23 +3,57 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-dark">🛒 Sipariş Yönetimi</h2>
-    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#siparisOlusturModal" onclick="yeniSiparisHazirla()">
-        ➕ Yeni Sipariş Oluştur
-    </button>
+<!-- ÜST BAŞLIK VE KONTROL ÇUBUĞU -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="fw-bold text-dark mb-0">🛒 Sipariş Yönetimi</h2>
+        <small class="text-muted" id="sayfaAltBaslik">Alış ve satış siparişleri, termin süreleri ve sevkiyat takibi</small>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <!-- Sipariş Tipi Filtre Butonları -->
+        <div class="btn-group shadow-sm" role="group">
+            <button type="button" class="btn btn-sm btn-primary active fw-semibold" id="btnFiltreTumu">
+                🌐 Tümü
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" id="btnFiltreSatis">
+                🛒 Satış
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-warning fw-semibold text-dark" id="btnFiltreAlis">
+                📦 Alış
+            </button>
+        </div>
+
+        <!-- Durum Filtre Seçimi -->
+        <select id="ddlDurumFiltre" class="form-select form-select-sm shadow-sm" style="width: auto; min-width: 140px;">
+            <option value="">📋 Tüm Durumlar</option>
+            <option value="Bekliyor">⏳ Bekliyor</option>
+            <option value="Tamamlandı">✅ Tamamlandı</option>
+            <option value="İptal Edildi">🚫 İptal Edildi</option>
+        </select>
+
+        <!-- Canlı Arama Kutusu -->
+        <input type="text" id="txtArama" class="form-control form-control-sm shadow-sm" placeholder="🔍 Sipariş No, Cari veya Depo..." style="min-width: 220px;">
+
+        <!-- Yeni Sipariş Butonu -->
+        <button class="btn btn-primary btn-sm fw-semibold shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#siparisOlusturModal" onclick="yeniSiparisHazirla()">
+            ➕ Yeni Sipariş Oluştur
+        </button>
+    </div>
 </div>
 
+<!-- SİPARİŞ LİSTESİ TABLOSU -->
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
-                        <th class="ps-4">Sipariş Numarası</th>
-                        <th>Müşteri (Cari)</th>
-                        <th>Çıkış Deposu</th>
+                        <th class="ps-4">Sipariş No</th>
+                        <th>Sipariş Tipi</th>
+                        <th>Cari (Müşteri / Tedarikçi)</th>
+                        <th>Depo</th>
                         <th>Sipariş Tarihi</th>
+                        <th>Vade / Temin Tarihi</th>
                         <th>Toplam Tutar</th>
                         <th>Durum</th>
                         <th class="text-end pe-4">İşlemler</th>
@@ -27,7 +61,7 @@
                 </thead>
                 <tbody id="siparisTabloGovdesi">
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
+                        <td colspan="9" class="text-center text-muted py-4">
                             ⏳ Siparişler yükleniyor...
                         </td>
                     </tr>
@@ -37,46 +71,76 @@
     </div>
 </div>
 
-<!-- Sipariş oluşturma modalı -->
+<!-- 1. YENİ SİPARİŞ OLUŞTURMA MODALI -->
 <div class="modal fade" id="siparisOlusturModal" tabindex="-1" aria-labelledby="siparisOlusturModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
+        <div class="modal-content shadow-lg">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold" id="siparisOlusturModalLabel">✨ Yeni Sipariş Oluştur</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <form id="siparisOlusturFormu">
-                    <div class="row mb-3">
-                        <div class="col-md-12">
-                            <label class="form-label fw-semibold">Müşteri (Cari)</label>
-                            <div class="input-group">
-                                <!-- Cari Seçim ID'sini gizli tutuyoruz -->
-                                <input type="hidden" id="hdnCariId" required />
-                                <!-- Seçilen Cari Adını sadece okunabilir gösteriyoruz -->
-                                <input type="text" id="txtSeciliCariAdi" class="form-control bg-light" placeholder="Lütfen sağdaki butondan bir müşteri (cari) seçiniz..." readonly required />
-                                <button class="btn btn-outline-primary fw-semibold" type="button" onclick="cariSecimModaliniAc()">🔍 Müşteri Seç</button>
+                    <!-- Sipariş Tipi Seçimi (Alış / Satış) -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Sipariş Tipi</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check p-3 border rounded-3 flex-fill bg-light" id="boxSatisTuru" style="cursor: pointer;">
+                                <input class="form-check-input ms-1 me-2" type="radio" name="rdSiparisTuru" id="rdSatis" value="Satış" checked onchange="siparisTuruDegisti()">
+                                <label class="form-check-label fw-bold text-primary" for="rdSatis" style="cursor: pointer;">
+                                    🛒 Satış Siparişi <small class="text-muted fw-normal d-block">Müşteriye satış yapılır, depodaki stoktan rezerve edilir / düşülür.</small>
+                                </label>
+                            </div>
+                            <div class="form-check p-3 border rounded-3 flex-fill bg-light" id="boxAlisTuru" style="cursor: pointer;">
+                                <input class="form-check-input ms-1 me-2" type="radio" name="rdSiparisTuru" id="rdAlis" value="Alış" onchange="siparisTuruDegisti()">
+                                <label class="form-check-label fw-bold text-warning text-dark" for="rdAlis" style="cursor: pointer;">
+                                    📦 Alış Siparişi <small class="text-muted fw-normal d-block">Tedarikçiden mal alımı yapılır, tamamlandığında depoya stok girişi yapılır.</small>
+                                </label>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Cari Seçimi ve Depo Seçimi -->
                     <div class="row mb-3">
-                        <div class="col-md-12">
-                            <label class="form-label fw-semibold">Çıkış Yapılacak Depo</label>
-                            <select id="ddlSiparisDepo" class="form-select" required>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" id="lblCariSecimBaslik">Müşteri (Cari)</label>
+                            <div class="input-group shadow-sm">
+                                <input type="hidden" id="hdnCariId" required />
+                                <input type="text" id="txtSeciliCariAdi" class="form-control bg-light" placeholder="Lütfen bir cari hesap seçiniz..." readonly required />
+                                <button class="btn btn-outline-primary fw-semibold" type="button" onclick="cariSecimModaliniAc()">🔍 Cari Seç</button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" id="lblDepoSecimBaslik">Çıkış Yapılacak Depo</label>
+                            <select id="ddlSiparisDepo" class="form-select shadow-sm" required>
                                 <option value="">⏳ Depolar yükleniyor...</option>
                             </select>
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
+                    <!-- Tarihler (Sipariş Tarihi ve Vade / Temin Tarihi) -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">📅 Sipariş Tarihi</label>
+                            <input type="date" id="txtSiparisTarihi" class="form-control shadow-sm" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" id="lblVadeTarihiBaslik">⏳ Vade / Tahsilat Tarihi</label>
+                            <input type="date" id="txtVadeTarihi" class="form-control shadow-sm" />
+                            <small class="text-muted" id="txtVadeTarihiAciklama">Müşterinin ödeme vadesi veya teslimat taahhüt tarihi</small>
+                        </div>
+                    </div>
+
+                    <!-- Sipariş Kalemleri Tablosu -->
+                    <div class="d-flex justify-content-between align-items-center mb-2 mt-3">
                         <h5 class="fw-bold text-secondary mb-0">📦 Sipariş Edilen Ürünler</h5>
-                        <button type="button" class="btn btn-sm btn-success fw-semibold" onclick="satirEkle()">
+                        <button type="button" class="btn btn-sm btn-success fw-semibold shadow-sm" onclick="satirEkle()">
                             ➕ Satır Ekle
                         </button>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-bordered align-middle">
+                    <div class="table-responsive shadow-sm border rounded">
+                        <table class="table table-bordered table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
                                     <th style="width: 45%;">Ürün</th>
@@ -97,38 +161,99 @@
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
-                <button type="button" class="btn btn-primary" onclick="siparisKaydet()">Siparişi Kaydet</button>
+                <button type="button" class="btn btn-primary px-4 fw-semibold" onclick="siparisKaydet()">💾 Siparişi Kaydet</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Cari Seçim Pop-up Modalı -->
+<!-- 2. SİPARİŞ DÜZENLE MODALI -->
+<div class="modal fade" id="siparisDuzenleModal" tabindex="-1" aria-labelledby="siparisDuzenleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold" id="siparisDuzenleModalLabel">✏️ Sipariş Bilgilerini Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="siparisDuzenleFormu">
+                    <input type="hidden" id="txtDuzenleSiparisId" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Sipariş Numarası</label>
+                        <input type="text" id="lblDuzenleSiparisNo" class="form-control bg-light" readonly />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Sipariş Tipi</label>
+                        <select id="ddlDuzenleSiparisTuru" class="form-select">
+                            <option value="Satış">🛒 Satış Siparişi</option>
+                            <option value="Alış">📦 Alış Siparişi</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Cari Hesap</label>
+                        <div class="input-group">
+                            <input type="hidden" id="hdnDuzenleCariId" />
+                            <input type="text" id="txtDuzenleCariAdi" class="form-control bg-light" readonly />
+                            <button class="btn btn-outline-primary" type="button" onclick="duzenleCariSecModalAc()">🔍 Değiştir</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Depo</label>
+                        <select id="ddlDuzenleDepo" class="form-select">
+                            <!-- Depolar JS ile doldurulacak -->
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">📅 Sipariş Tarihi</label>
+                            <input type="date" id="txtDuzenleSiparisTarihi" class="form-control" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">⏳ Vade / Temin Tarihi</label>
+                            <input type="date" id="txtDuzenleVadeTarihi" class="form-control" />
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-warning fw-semibold px-4" onclick="siparisDuzenleKaydet()">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. CARİ SEÇİM MODALI -->
 <div class="modal fade" id="cariSecModal" tabindex="-1" aria-labelledby="cariSecModalLabel" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-secondary text-white">
-                <h5 class="modal-title fw-bold" id="cariSecModalLabel">👥 Müşteri (Cari) Seçimi</h5>
+                <h5 class="modal-title fw-bold" id="cariSecModalLabel">👥 Cari Seçimi</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-3">
                 <div class="mb-3">
-                    <input type="text" id="txtCariAra" class="form-control" placeholder="Müşteri adı veya cari koduna göre arama yapın..." oninput="cariAra()" />
+                    <input type="text" id="txtCariAra" class="form-control shadow-sm" placeholder="Cari adı veya koduna göre arama yapın..." oninput="cariAra()" />
                 </div>
                 <div class="table-responsive" style="max-height: 350px;">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle mb-0">
                         <thead class="table-dark">
                             <tr>
                                 <th>Cari Kodu</th>
-                                <th>Müşteri Adı</th>
+                                <th>Cari Adı / Unvanı</th>
                                 <th>Tür</th>
                                 <th class="text-center" style="width: 15%;">Seçim</th>
                             </tr>
                         </thead>
                         <tbody id="cariSecimTabloGovdesi">
-                            <!-- Cariler JS tarafından buraya doldurulacak -->
+                            <!-- Cariler JS ile doldurulacak -->
                         </tbody>
                     </table>
                 </div>
@@ -137,7 +262,7 @@
     </div>
 </div>
 
-<!-- Ürün Seçim Pop-up Modalı -->
+<!-- 4. ÜRÜN SEÇİM MODALI -->
 <div class="modal fade" id="urunSecModal" tabindex="-1" aria-labelledby="urunSecModalLabel" aria-hidden="true" style="z-index: 1065;">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
@@ -145,23 +270,22 @@
                 <h5 class="modal-title fw-bold" id="urunSecModalLabel">📦 Ürün Seçimi</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-3">
                 <div class="mb-3">
-                    <input type="text" id="txtUrunAra" class="form-control" placeholder="Ürün adı veya sistem ürün koduna göre arama yapın..." oninput="urunAra()" />
+                    <input type="text" id="txtUrunAra" class="form-control shadow-sm" placeholder="Ürün adı veya koduna göre arama yapın..." oninput="urunAra()" />
                 </div>
                 <div class="table-responsive" style="max-height: 350px;">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle mb-0">
                         <thead class="table-dark">
                             <tr>
                                 <th>Ürün Kodu</th>
                                 <th>Ürün Adı</th>
-                                <th>Marka / Model</th>
-                                <th>Varsayılan Fiyat</th>
+                                <th>Fiyat</th>
                                 <th class="text-center" style="width: 15%;">Seçim</th>
                             </tr>
                         </thead>
                         <tbody id="urunSecimTabloGovdesi">
-                            <!-- Ürünler JS tarafından buraya doldurulacak -->
+                            <!-- Ürünler JS ile doldurulacak -->
                         </tbody>
                     </table>
                 </div>
@@ -170,67 +294,68 @@
     </div>
 </div>
 
-<!-- Sipariş Detay Modalı -->
+<!-- 5. SİPARİŞ DETAY MODALI -->
 <div class="modal fade" id="siparisDetayModal" tabindex="-1" aria-labelledby="siparisDetayModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg">
+        <div class="modal-content shadow-lg">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title fw-bold" id="siparisDetayModalLabel">🔍 Sipariş Detayları</h5>
+                <h5 class="modal-title fw-bold" id="siparisDetayModalLabel">📋 Sipariş Detayları</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
-            <div class="modal-body">
-                <div class="row mb-3">
+            <div class="modal-body p-4">
+                <div class="row mb-3 pb-3 border-bottom">
                     <div class="col-md-6">
-                        <p class="mb-1 text-muted small"><strong>Sipariş Numarası:</strong></p>
-                        <h5 class="fw-bold text-dark" id="lblDetaySiparisNo">-</h5>
+                        <div class="text-muted small">SİPARİŞ NO:</div>
+                        <h5 class="fw-bold text-dark" id="detaySiparisNo">-</h5>
+                        <div class="text-muted small mt-2">SİPARİŞ TİPİ:</div>
+                        <div id="detaySiparisTuruBadge">-</div>
                     </div>
                     <div class="col-md-6 text-md-end">
-                        <p class="mb-1 text-muted small"><strong>Sipariş Tarihi:</strong></p>
-                        <h5 class="fw-bold text-dark" id="lblDetayTarih">-</h5>
+                        <div class="text-muted small">DURUM:</div>
+                        <div id="detayDurumBadge">-</div>
+                        <div class="text-muted small mt-2">DEPO:</div>
+                        <div class="fw-bold text-dark" id="detayDepoAdi">-</div>
                     </div>
                 </div>
-                <hr />
-                <div class="row mb-3">
+
+                <div class="row mb-3 pb-3 border-bottom">
                     <div class="col-md-6">
-                        <p class="mb-1 text-muted small"><strong>Müşteri (Cari) Bilgileri:</strong></p>
-                        <h6 class="fw-semibold text-secondary mb-1" id="lblDetayCariAdi">-</h6>
-                        <span class="badge bg-light text-dark border" id="lblDetayCariKodu">-</span>
+                        <div class="text-muted small">CARİ HESAP:</div>
+                        <div class="fw-bold text-dark" id="detayCariAdi">-</div>
+                        <div class="small text-muted" id="detayCariKodu">-</div>
                     </div>
                     <div class="col-md-6 text-md-end">
-                        <p class="mb-1 text-muted small"><strong>Çıkış Deposu:</strong></p>
-                        <h6 class="fw-semibold text-secondary mb-1" id="lblDetayDepoAdi">-</h6>
-                        <span class="badge bg-light text-primary border">🏢 Depo Çıkışlı</span>
+                        <div class="text-muted small">SİPARİŞ TARİHİ:</div>
+                        <div class="fw-bold text-dark" id="detaySiparisTarihi">-</div>
+                        <div class="text-muted small mt-1">VADE / TEMİN TARİHİ:</div>
+                        <div class="fw-bold text-primary" id="detayVadeTarihi">-</div>
                     </div>
                 </div>
-                
-                <h5 class="fw-bold text-secondary mt-4 mb-2">📦 Sipariş Kalemleri</h5>
+
+                <h6 class="fw-bold text-dark mb-2">📦 Sipariş Kalemleri</h6>
                 <div class="table-responsive">
-                    <table class="table table-bordered align-middle">
+                    <table class="table table-bordered table-sm align-middle mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th>Ürün Kodu</th>
                                 <th>Ürün Adı</th>
-                                <th class="text-center" style="width: 15%;">Miktar</th>
-                                <th class="text-end" style="width: 20%;">Birim Fiyat</th>
-                                <th class="text-end" style="width: 25%;">Satır Toplamı</th>
+                                <th class="text-center">Miktar</th>
+                                <th class="text-end">Birim Fiyat</th>
+                                <th class="text-end">Satır Toplam</th>
                             </tr>
                         </thead>
                         <tbody id="detayUrunlerTabloGovdesi">
-                            <!-- JS tarafından doldurulacak -->
+                            <!-- JS ile doldurulacak -->
                         </tbody>
-                        <tfoot>
-                            <tr>
-                                <th colspan="4" class="text-end">Genel Toplam:</th>
-                                <th class="text-end text-primary fw-bold fs-5" id="lblDetayGenelToplam">0,00 TL</th>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
+
+                <div class="d-flex justify-content-end mt-3">
+                    <h4 class="fw-bold text-dark mb-0">Toplam: <span id="detayGenelToplam" class="text-primary">0,00 TL</span></h4>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary fw-semibold" onclick="faturaYazdir()">
-                    🖨️ Faturayı PDF Olarak Yazdır
-                </button>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-primary fw-semibold" id="btnDetayFaturaYazdir">🖨️ Fatura Yazdır</button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
             </div>
         </div>
@@ -239,233 +364,280 @@
 
 @section Scripts {
     <script>
-        var urunlerListesi = []; // Dropdown ve pop-up için global ürün listesi
-        var carilerListesi = []; // Pop-up'ta arama yapabilmek için global cari listesi
-        var aktifUrunSecimSatiri = null; // Ürün seçiminin hangi satıra aktarılacağını tutan değişken
+        var aktifCariTuruSecimi = 'Satış';
+        var aktifSiparisTuruFiltresi = '';
+        var aktifDurumFiltresi = '';
+        var carilerListesi = [];
+        var urunlerListesi = [];
+        var depolarListesi = [];
+        var seciliSatirElementi = null;
+        var cariSecimHedefi = 'ekle'; // 'ekle' veya 'duzenle'
 
         $(document).ready(function () {
+            // İlk açılışta siparişleri ve temel verileri yükle
             siparisleriGetir();
-            carileriGetir();
-            urunleriGetir();
-            depolariGetir();
+            temelVerileriYukle();
+
+            // Filtre Butonları (Tümü / Satış / Alış)
+            $('#btnFiltreTumu').click(function () {
+                aktifSiparisTuruFiltresi = '';
+                $(this).removeClass('btn-outline-primary').addClass('btn-primary active');
+                $('#btnFiltreSatis').removeClass('btn-primary text-white active').addClass('btn-outline-primary');
+                $('#btnFiltreAlis').removeClass('btn-warning text-dark active').addClass('btn-outline-warning');
+                siparisleriGetir();
+            });
+
+            $('#btnFiltreSatis').click(function () {
+                aktifSiparisTuruFiltresi = 'Satış';
+                $(this).removeClass('btn-outline-primary').addClass('btn-primary text-white active');
+                $('#btnFiltreTumu').removeClass('btn-primary active').addClass('btn-outline-primary');
+                $('#btnFiltreAlis').removeClass('btn-warning text-dark active').addClass('btn-outline-warning');
+                siparisleriGetir();
+            });
+
+            $('#btnFiltreAlis').click(function () {
+                aktifSiparisTuruFiltresi = 'Alış';
+                $(this).removeClass('btn-outline-warning').addClass('btn-warning text-dark active');
+                $('#btnFiltreTumu').removeClass('btn-primary active').addClass('btn-outline-primary');
+                $('#btnFiltreSatis').removeClass('btn-primary text-white active').addClass('btn-outline-primary');
+                siparisleriGetir();
+            });
+
+            // Durum Filtresi Değiştiğinde
+            $('#ddlDurumFiltre').change(function () {
+                aktifDurumFiltresi = $(this).val();
+                siparisleriGetir();
+            });
+
+            // Canlı Arama
+            $('#txtArama').on('keyup', function () {
+                siparisleriGetir();
+            });
         });
 
-        // 1. SİPARİŞLERİ LİSTELE
+        // 1. SİPARİŞLERİ LİSTELEME
         function siparisleriGetir() {
+            var arama = $('#txtArama').val().trim();
+
             $.ajax({
                 url: '/Siparis/SiparisleriListele',
                 type: 'GET',
+                data: {
+                    aramaKelimesi: arama,
+                    siparisTuru: aktifSiparisTuruFiltresi,
+                    durum: aktifDurumFiltresi
+                },
                 dataType: 'json',
                 success: function (response) {
                     var html = '';
                     if (response.isSuccess && response.data.length > 0) {
                         $.each(response.data, function (index, item) {
+                            // Sipariş Tipi Rozeti
+                            var turRozet = item.siparisTuru === 'Alış'
+                                ? '<span class="badge bg-warning bg-opacity-10 text-dark border border-warning fw-bold px-2 py-1">📦 Alış</span>'
+                                : '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary fw-bold px-2 py-1">🛒 Satış</span>';
+
+                            // Durum Rozeti
+                            var durumRozet = '';
+                            if (item.durum === 'Tamamlandı') {
+                                durumRozet = '<span class="badge bg-success bg-opacity-10 text-success border border-success fw-bold px-2 py-1">✅ Tamamlandı</span>';
+                            } else if (item.durum === 'İptal Edildi' || item.isDeleted) {
+                                durumRozet = '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-bold px-2 py-1">🚫 İptal Edildi</span>';
+                            } else {
+                                durumRozet = '<span class="badge bg-warning bg-opacity-10 text-dark border border-warning fw-bold px-2 py-1">⏳ Bekliyor</span>';
+                            }
+
+                            // İşlem Butonları
+                            var islemButonlari = `
+                                <button class="btn btn-sm btn-outline-info py-1 me-1" onclick="siparisDetayModaliniAc('${item.siparisId}')" title="Sipariş Detaylarını Görüntüle">
+                                    🔍 Detay
+                                </button>
+                            `;
+
+                            if (item.durum === 'Bekliyor' && !item.isDeleted) {
+                                islemButonlari += `
+                                    <button class="btn btn-sm btn-outline-success py-1 me-1 fw-semibold" onclick="siparisDurumDegistir('${item.siparisId}', 'Tamamlandı')" title="Siparişi Tamamla">
+                                        ✅ Tamamla
+                                    </button>
+                                    <button class="btn btn-sm btn-warning py-1 me-1 fw-semibold" onclick="siparisDuzenleModalAc('${item.siparisId}')" title="Siparişi Düzenle">
+                                        ✏️ Düzenle
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger py-1" onclick="siparisSil('${item.siparisId}')" title="Siparişi İptal Et">
+                                        🚫 İptal Et
+                                    </button>
+                                `;
+                            } else if (item.durum === 'Tamamlandı') {
+                                islemButonlari += `
+                                    <a href="/Siparis/FaturaPdf/${item.siparisId}" target="_blank" class="btn btn-sm btn-outline-secondary py-1 me-1" title="Fatura / İrsaliye Yazdır">
+                                        🖨️ Fatura
+                                    </a>
+                                `;
+                            }
+
                             html += `<tr>
-                                        <td class="ps-4 fw-semibold">${item.siparisNumarasi}</td>
-                                        <td>${item.cariAdi}</td>
-                                        <td><span class="badge bg-light text-dark border">🏢 ${item.depoAdi || 'Merkez Depo'}</span></td>
+                                        <td class="ps-4"><span class="badge bg-light text-dark border fw-bold">${item.siparisNumarasi}</span></td>
+                                        <td>${turRozet}</td>
+                                        <td class="fw-semibold">${item.cariAdi} <small class="text-muted d-block">(${item.cariTuru})</small></td>
+                                        <td><span class="badge bg-light text-dark border">🏢 ${item.depoAdi}</span></td>
                                         <td>${item.siparisTarihi}</td>
-                                        <td class="fw-semibold text-primary">${item.toplamTutar.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
-                                        <td><span class="badge bg-warning text-dark">${item.durum}</span></td>
-                                        <td class="text-end pe-4">
-                                            <button class="btn btn-sm btn-outline-info py-1 me-1" onclick="siparisDetayModaliniAc('${item.siparisId}')">🔍 Detay</button>
-                                            <button class="btn btn-sm btn-outline-danger py-1" onclick="siparisSil('${item.siparisId}')">🗑️ İptal Et</button>
-                                        </td>
+                                        <td><span class="fw-semibold ${item.vadeTarihi !== '-' ? 'text-primary' : 'text-muted'}">${item.vadeTarihi}</span></td>
+                                        <td class="fw-bold text-dark">${item.toplamTutar.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+                                        <td>${durumRozet}</td>
+                                        <td class="text-end pe-4 text-nowrap">${islemButonlari}</td>
                                      </tr>`;
                         });
                     } else {
                         html = `<tr>
-                                    <td colspan="7" class="text-center text-muted py-4">📂 Kayıtlı sipariş bulunamadı.</td>
+                                    <td colspan="9" class="text-center text-muted py-4">📂 Kriterlere uygun sipariş kaydı bulunamadı.</td>
                                  </tr>`;
                     }
                     $('#siparisTabloGovdesi').html(html);
                 },
                 error: function () {
-                    alert("Siparişler yüklenirken bir hata oluştu.");
+                    $('#siparisTabloGovdesi').html(`<tr><td colspan="9" class="text-center text-danger py-4">❌ Siparişler yüklenirken bir hata oluştu!</td></tr>`);
                 }
             });
         }
 
-        // 2. CARİ LİSTESİNİ GETİR
-        function carileriGetir() {
-            $.ajax({
-                url: '/Cari/CarileriListele',
-                type: 'GET',
-                dataType: 'json',
-                success: function (response) {
-                    if (response.isSuccess) {
-                        carilerListesi = response.data;
-                    }
+        // 2. TEMEL VERİLERİ (DEPO, CARİ, ÜRÜN) YÜKLEME
+        function temelVerileriYukle() {
+            // Depoları getir
+            $.get('/Stok/GetDepolar', function (res) {
+                if (res.isSuccess) {
+                    depolarListesi = res.data;
+                    var opts = '<option value="">-- Depo Seçin --</option>';
+                    $.each(res.data, function (i, d) {
+                        opts += `<option value="${d.depoId}">${d.depoAdi}</option>`;
+                    });
+                    $('#ddlSiparisDepo').html(opts);
+                    $('#ddlDuzenleDepo').html(opts);
+                }
+            });
+
+            // Carileri getir
+            $.get('/Cari/CarileriListele', function (res) {
+                if (res.isSuccess) {
+                    carilerListesi = res.data;
+                }
+            });
+
+            // Ürünleri getir
+            $.get('/Urun/UrunleriListele', function (res) {
+                if (res.isSuccess) {
+                    urunlerListesi = res.data;
                 }
             });
         }
 
-        // 3. ÜRÜN LİSTESİNİ GETİR
-        function urunleriGetir() {
-            $.ajax({
-                url: '/Urun/UrunleriListele',
-                type: 'GET',
-                dataType: 'json',
-                success: function (response) {
-                    if (response.isSuccess) {
-                        urunlerListesi = response.data;
-                    }
-                }
-            });
-        }
-        //3.1 DEPOLARI GETİR VE AÇILIR LİSTEYE DOLDUR
-        function depolariGetir(){
-            $.ajax({ // <-- Eksik olan bu satırı ekledik
-                url: '/Depo/DepolariListele',
-                type: 'GET',
-                dataType: 'json',
-                success: function (response) {
-                    if (response.isSuccess && response.data.length > 0) {
-                        var html = '<option value="">-- Çıkış Deposu Seçiniz --</option>';
-                        $.each(response.data, function (index, item) {
-                            var depoId = item.depoId || item.id;
-                            var depoAdi = item.depoAdi || item.ad;
-                            html += `<option value="${depoId}">${depoAdi}</option>`;
-                        });
-                        $('#ddlSiparisDepo').html(html);
-                    } else {
-                        $('#ddlSiparisDepo').html('<option value="">Sistemde depo bulunamadı!</option>');
-                    }
-                },
-                error: function () {
-                    $('#ddlSiparisDepo').html('<option value="">Depolar yüklenirken hata oluştu!</option>');
-                }
-            }); // <-- $.ajax'ı kapatan parantez
-        } // <-- depolariGetir() fonksiyonunu kapatan parantez
-
-
-        // 4. CARİ SEÇİM MODALINI AÇ
-        function cariSecimModaliniAc() {
-            var html = '';
-            if (carilerListesi.length > 0) {
-                $.each(carilerListesi, function (index, item) {
-                    // C# DTO'dan gelebilecek olası isimlendirme varyasyonlarına karşı fallback'ler
-                    var cariId = item.id || item.cariId;
-                    var cariAd = item.ad || item.cariAdi;
-                    var cariKod = item.cariKodu || '';
-                    var cariTuru = item.cariTuru || '';
-
-                    html += `<tr class="cari-secim-satir" data-ad="${cariAd.toLowerCase()}" data-kod="${cariKod.toLowerCase()}">
-                                <td><span class="badge bg-light text-dark border">${cariKod}</span></td>
-                                <td class="fw-semibold">${cariAd}</td>
-                                <td>${cariTuru}</td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="cariSec('${cariId}', '${cariAd}')">Seç</button>
-                                </td>
-                             </tr>`;
-                });
-            } else {
-                html = `<tr><td colspan="4" class="text-center text-muted">Sistemde müşteri bulunamadı. Lütfen önce Cari modülünden müşteri ekleyin.</td></tr>`;
-            }
-            $('#cariSecimTabloGovdesi').html(html);
-            $('#txtCariAra').val('');
-            $('#cariSecModal').modal('show');
-        }
-
-        // 5. CARİ MODALİNDAKİ ARAMA FONKSİYONU
-        function cariAra() {
-            var aranan = $('#txtCariAra').val().toLowerCase();
-            $('#cariSecimTabloGovdesi tr').each(function () {
-                var ad = $(this).data('ad') || '';
-                var kod = $(this).data('kod') || '';
-                if (ad.indexOf(aranan) > -1 || kod.indexOf(aranan) > -1) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        }
-
-        // 6. CARİ SEÇ VE FORMA AKTAR
-        function cariSec(id, ad) {
-            $('#hdnCariId').val(id);
-            $('#txtSeciliCariAdi').val(ad);
-            $('#cariSecModal').modal('hide');
-        }
-
-        // 7. ÜRÜN SEÇİM MODALINI SATIR BAZINDA AÇ
-        function urunSecimModaliniAc(btn) {
-            aktifUrunSecimSatiri = $(btn).closest('tr'); // Seçimin hangi satıra yapılacağını saklıyoruz
-            var html = '';
-            if (urunlerListesi.length > 0) {
-                $.each(urunlerListesi, function (index, item) {
-                    // C# DTO / Entity modeli JSON formatlarında field eşleştirmesi
-                    var urunId = item.urunId || item.id;
-                    var urunAdi = item.urunAdi || item.ad;
-                    var urunKodu = item.sistemUrunKodu || item.urunKodu;
-                    var fiyat = item.fiyat || 0;
-                    var markaModel = (item.marka || '') + ' ' + (item.model || '');
-
-                    html += `<tr class="urun-secim-satir" data-ad="${urunAdi.toLowerCase()}" data-kod="${urunKodu.toLowerCase()}">
-                                <td><span class="badge bg-light text-dark border">${urunKodu}</span></td>
-                                <td class="fw-semibold">${urunAdi}</td>
-                                <td>${markaModel}</td>
-                                <td class="fw-semibold text-primary">${fiyat.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="urunSec('${urunId}', '${urunAdi}', ${fiyat})">Seç</button>
-                                </td>
-                             </tr>`;
-                });
-            } else {
-                html = `<tr><td colspan="5" class="text-center text-muted">Sistemde ürün bulunamadı. Lütfen önce Ürün modülünden ürün ekleyin.</td></tr>`;
-            }
-            $('#urunSecimTabloGovdesi').html(html);
-            $('#txtUrunAra').val('');
-            $('#urunSecModal').modal('show');
-        }
-
-        // 8. ÜRÜN SEÇİM MODALİNDEKİ ARAMA FONKSİYONU
-        function urunAra() {
-            var aranan = $('#txtUrunAra').val().toLowerCase();
-            $('#urunSecimTabloGovdesi tr').each(function () {
-                var ad = $(this).data('ad') || '';
-                var kod = $(this).data('kod') || '';
-                if (ad.indexOf(aranan) > -1 || kod.indexOf(aranan) > -1) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        }
-
-        // 9. ÜRÜNÜ SEÇ VE SATIRA AKTAR
-        function urunSec(id, ad, fiyat) {
-            if (aktifUrunSecimSatiri) {
-                aktifUrunSecimSatiri.find('.urun-id-input').val(id);
-                aktifUrunSecimSatiri.find('.urun-adi-input').val(ad);
-                aktifUrunSecimSatiri.find('.fiyat-input').val(fiyat);
-                hesapla();
-            }
-            $('#urunSecModal').modal('hide');
-        }
-
-        // 10. MODAL AÇILIRKEN HAFASINI TEMİZLE VE BİR BOŞ SATIR EKLE
+        // 3. YENİ SİPARİŞ MODALINI HAZIRLAMA
         function yeniSiparisHazirla() {
             $('#siparisOlusturFormu')[0].reset();
             $('#hdnCariId').val('');
             $('#txtSeciliCariAdi').val('');
             $('#detayTabloGovdesi').empty();
             $('#lblGenelToplam').text('0,00 TL');
-            satirEkle(); // İlk satır varsayılan olarak gelsin
+            $('#rdSatis').prop('checked', true);
+
+            // Tarihleri varsayılan olarak doldur
+            var bugun = new Date().toISOString().split('T')[0];
+            $('#txtSiparisTarihi').val(bugun);
+
+            var vade = new Date();
+            vade.setDate(vade.getDate() + 14);
+            $('#txtVadeTarihi').val(vade.toISOString().split('T')[0]);
+
+            siparisTuruDegisti();
+            satirEkle(); // İlk boş satırı ekle
         }
 
-        // 11. DİNAMİK SATIR EKLE (SEÇİM MODALI DESTEKLİ)
+        // 4. SİPARİŞ TÜRÜ DEĞİŞTİĞİNDE ARAYÜZÜ UYARLAMA
+        function siparisTuruDegisti() {
+            var seciliTur = $('input[name="rdSiparisTuru"]:checked').val();
+            aktifCariTuruSecimi = seciliTur;
+
+            if (seciliTur === 'Satış') {
+                $('#lblCariSecimBaslik').text('Müşteri (Cari)');
+                $('#lblDepoSecimBaslik').text('Çıkış Yapılacak Depo');
+                $('#lblVadeTarihiBaslik').text('⏳ Vade / Tahsilat Tarihi');
+                $('#txtVadeTarihiAciklama').text('Müşterinin ödeme vadesi veya teslimat taahhüt tarihi');
+                $('#txtSeciliCariAdi').attr('placeholder', 'Lütfen bir müşteri hesabı seçiniz...');
+            } else {
+                $('#lblCariSecimBaslik').text('Tedarikçi (Cari)');
+                $('#lblDepoSecimBaslik').text('Giriş Yapılacak Depo');
+                $('#lblVadeTarihiBaslik').text('⏳ Temin / Teslimat Tarihi');
+                $('#txtVadeTarihiAciklama').text('Tedarikçinin malzemeyi temin ve teslim edeceği taahhüt tarihi');
+                $('#txtSeciliCariAdi').attr('placeholder', 'Lütfen bir tedarikçi hesabı seçiniz...');
+            }
+
+            // Cari seçimini sıfırla çünkü tür değişti
+            $('#hdnCariId').val('');
+            $('#txtSeciliCariAdi').val('');
+        }
+
+        // 5. CARİ SEÇİMİ
+        function cariSecimModaliniAc() {
+            cariSecimHedefi = 'ekle';
+            cariModalTablosunuDoldur(carilerListesi);
+            $('#cariSecModal').modal('show');
+        }
+
+        function duzenleCariSecModalAc() {
+            cariSecimHedefi = 'duzenle';
+            cariModalTablosunuDoldur(carilerListesi);
+            $('#cariSecModal').modal('show');
+        }
+
+        function cariModalTablosunuDoldur(liste) {
+            var html = '';
+            var oncelikliTur = cariSecimHedefi === 'ekle' ? (aktifCariTuruSecimi === 'Satış' ? 'Müşteri' : 'Tedarikçi') : '';
+
+            $.each(liste, function (i, c) {
+                var badgeClass = c.cariTuru === 'Müşteri' ? 'bg-info' : 'bg-warning text-dark';
+                var highlight = (oncelikliTur && c.cariTuru === oncelikliTur) ? 'table-primary' : '';
+
+                html += `<tr class="${highlight}">
+                            <td><span class="badge bg-light text-dark border">${c.cariKodu}</span></td>
+                            <td class="fw-semibold">${c.ad}</td>
+                            <td><span class="badge ${badgeClass}">${c.cariTuru}</span></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-primary py-1" onclick="cariSec('${c.id}', '${c.ad}')">Seç</button>
+                            </td>
+                         </tr>`;
+            });
+            $('#cariSecimTabloGovdesi').html(html);
+        }
+
+        function cariAra() {
+            var q = $('#txtCariAra').val().toLowerCase().trim();
+            var filtrelenmis = carilerListesi.filter(function (c) {
+                return c.ad.toLowerCase().includes(q) || c.cariKodu.toLowerCase().includes(q);
+            });
+            cariModalTablosunuDoldur(filtrelenmis);
+        }
+
+        function cariSec(id, ad) {
+            if (cariSecimHedefi === 'duzenle') {
+                $('#hdnDuzenleCariId').val(id);
+                $('#txtDuzenleCariAdi').val(ad);
+            } else {
+                $('#hdnCariId').val(id);
+                $('#txtSeciliCariAdi').val(ad);
+            }
+            $('#cariSecModal').modal('hide');
+        }
+
+        // 6. DİNAMİK SATIR VE ÜRÜN İŞLEMLERİ
         function satirEkle() {
             var satirHtml = `<tr>
                                 <td>
                                     <div class="input-group">
                                         <input type="hidden" class="urun-id-input" required />
-                                        <input type="text" class="form-control urun-adi-input bg-light" placeholder="Ürün seçmek için tıklayın..." readonly required onclick="urunSecimModaliniAc(this)" />
+                                        <input type="text" class="form-control bg-light urun-adi-input" placeholder="Ürün seçiniz..." readonly required />
                                         <button class="btn btn-outline-primary" type="button" onclick="urunSecimModaliniAc(this)">🔍 Seç</button>
                                     </div>
                                 </td>
                                 <td>
-                                    <input type="number" class="form-control miktar-input" value="1" min="1" oninput="hesapla()" required />
+                                    <input type="number" class="form-control miktar-input" min="1" value="1" oninput="hesapla()" required />
                                 </td>
                                 <td>
                                     <input type="number" class="form-control fiyat-input" step="0.01" min="0" oninput="hesapla()" required />
@@ -474,87 +646,128 @@
                                     <input type="text" class="form-control satir-toplam-input bg-light" value="0,00 TL" readonly />
                                 </td>
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="satirSil(this)">❌</button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="satirSil(this)" title="Satırı Sil">🚫</button>
                                 </td>
                              </tr>`;
-
             $('#detayTabloGovdesi').append(satirHtml);
             hesapla();
         }
 
-        // 12. SATIR SİL
         function satirSil(btn) {
             if ($('#detayTabloGovdesi tr').length > 1) {
                 $(btn).closest('tr').remove();
                 hesapla();
             } else {
-                alert("Siparişte en az bir ürün satırı bulunmalıdır.");
+                alert('Siparişte en az bir ürün satırı bulunmalıdır!');
             }
         }
 
-        // 13. HESAPLAMA (SATIR VE GENEL TOPLAM)
+        function urunSecimModaliniAc(btn) {
+            seciliSatirElementi = $(btn).closest('tr');
+            urunModalTablosunuDoldur(urunlerListesi);
+            $('#urunSecModal').modal('show');
+        }
+
+        function urunModalTablosunuDoldur(liste) {
+            var html = '';
+            $.each(liste, function (i, u) {
+                html += `<tr>
+                            <td><span class="badge bg-light text-dark border">${u.urunKodu || u.sistemUrunKodu || '-'}</span></td>
+                            <td class="fw-semibold">${u.ad || u.urunAdi}</td>
+                            <td class="text-dark">${(u.fiyat || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-primary py-1" onclick="urunSec('${u.id || u.urunId}', '${u.ad || u.urunAdi}', ${u.fiyat || 0})">Seç</button>
+                            </td>
+                         </tr>`;
+            });
+            $('#urunSecimTabloGovdesi').html(html);
+        }
+
+        function urunAra() {
+            var q = $('#txtUrunAra').val().toLowerCase().trim();
+            var filtrelenmis = urunlerListesi.filter(function (u) {
+                var ad = (u.ad || u.urunAdi || '').toLowerCase();
+                var kod = (u.urunKodu || u.sistemUrunKodu || '').toLowerCase();
+                return ad.includes(q) || kod.includes(q);
+            });
+            urunModalTablosunuDoldur(filtrelenmis);
+        }
+
+        function urunSec(id, ad, fiyat) {
+            if (seciliSatirElementi) {
+                seciliSatirElementi.find('.urun-id-input').val(id);
+                seciliSatirElementi.find('.urun-adi-input').val(ad);
+                seciliSatirElementi.find('.fiyat-input').val(fiyat);
+                hesapla();
+            }
+            $('#urunSecModal').modal('hide');
+        }
+
         function hesapla() {
             var genelToplam = 0;
-
             $('#detayTabloGovdesi tr').each(function () {
                 var miktar = parseFloat($(this).find('.miktar-input').val()) || 0;
-                var fiyat = parseFloat($(this).find('.fiyat-input').val()) || 0;
-                var satirToplam = miktar * fiyat;
-                genelToplam += satirToplam;
+                var birimFiyat = parseFloat($(this).find('.fiyat-input').val()) || 0;
+                var satirToplam = miktar * birimFiyat;
 
                 $(this).find('.satir-toplam-input').val(satirToplam.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }));
+                genelToplam += satirToplam;
             });
-
             $('#lblGenelToplam').text(genelToplam.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }));
         }
 
-        // 14. SİPARİŞİ SUNUCUYA KAYDET
+        // 7. SİPARİŞİ VERİTABANINA KAYDETME (POST)
         function siparisKaydet() {
-            var form = $('#siparisOlusturFormu')[0];
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-
             var cariId = $('#hdnCariId').val();
+            var depoId = $('#ddlSiparisDepo').val();
+            var siparisTuru = $('input[name="rdSiparisTuru"]:checked').val();
+            var siparisTarihi = $('#txtSiparisTarihi').val();
+            var vadeTarihi = $('#txtVadeTarihi').val() || null;
+
             if (!cariId) {
-                alert("Lütfen bir müşteri (cari) seçiniz.");
+                alert('Lütfen bir cari hesap seçin!');
                 return;
             }
-
-            var depoId = $('#ddlSiparisDepo').val();
             if (!depoId) {
-                alert("Lütfen çıkış yapılacak bir depo seçiniz.");
+                alert('Lütfen bir depo seçin!');
+                return;
+            }
+            if (!siparisTarihi) {
+                alert('Lütfen sipariş tarihini girin!');
                 return;
             }
 
             var detaylar = [];
-            var hata = false;
+            var hataVar = false;
 
             $('#detayTabloGovdesi tr').each(function () {
                 var urunId = $(this).find('.urun-id-input').val();
-                var miktar = parseInt($(this).find('.miktar-input').val()) || 0;
-                var fiyat = parseFloat($(this).find('.fiyat-input').val()) || 0;
+                var miktar = parseInt($(this).find('.miktar-input').val());
+                var birimFiyat = parseFloat($(this).find('.fiyat-input').val());
 
-                if (!urunId) {
-                    alert("Lütfen tüm satırlarda ürün seçimi yapınız.");
-                    hata = true;
-                    return false; // Loop'tan çık
+                if (!urunId || isNaN(miktar) || miktar <= 0 || isNaN(birimFiyat) || birimFiyat < 0) {
+                    hataVar = true;
+                    return false;
                 }
 
                 detaylar.push({
                     UrunId: urunId,
                     Miktar: miktar,
-                    BirimFiyat: fiyat
+                    BirimFiyat: birimFiyat
                 });
             });
 
-            if (hata) return;
+            if (hataVar || detaylar.length === 0) {
+                alert('Lütfen tüm satırlardaki ürün, miktar ve fiyat bilgilerini eksiksiz doldurun!');
+                return;
+            }
 
-            var siparisData  ={
+            var model = {
                 CariId: cariId,
                 DepoId: depoId,
-                SiparisTarihi: new Date().toISOString(),
+                SiparisTuru: siparisTuru,
+                SiparisTarihi: siparisTarihi,
+                VadeTarihi: vadeTarihi,
                 Detaylar: detaylar
             };
 
@@ -562,97 +775,163 @@
                 url: '/Siparis/SiparisOlustur',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify(siparisData),
-                success: function (response) {
-                    if (response.isSuccess) {
-                        alert(response.message);
+                data: JSON.stringify(model),
+                success: function (res) {
+                    if (res.isSuccess) {
                         $('#siparisOlusturModal').modal('hide');
-                        siparisleriGetir(); // Listeyi güncelle
+                        siparisleriGetir();
+                        alert(res.message);
                     } else {
-                        alert(response.message);
+                        alert('Hata: ' + res.message);
                     }
                 },
                 error: function () {
-                    alert("Sipariş kaydedilirken bir hata oluştu.");
+                    alert('Sipariş oluşturulurken sunucu hatası meydana geldi!');
                 }
             });
         }
 
-        // 15. SİPARİŞİ İPTAL ET / SİL
-        function siparisSil(id) {
-            if (confirm("Bu siparişi iptal etmek istediğinize emin misiniz?")) {
+        // 8. SİPARİŞ DURUM GÜNCELLEME (TAMAMLA / İPTAL ET)
+        function siparisDurumDegistir(id, durum) {
+            var mesaj = durum === 'Tamamlandı'
+                ? 'Bu siparişi tamamlamak istediğinize emin misiniz? (Alış siparişi ise ürünler depoya kabul edilecek ve stoklara eklenecektir)'
+                : 'Bu siparişi iptal etmek istediğinize emin misiniz? (Satış siparişi ise ürünler depodaki stoklara geri yüklenecektir)';
+
+            if (confirm(mesaj)) {
                 $.ajax({
-                    url: '/Siparis/SiparisSil',
+                    url: '/Siparis/SiparisDurumGuncelle',
                     type: 'POST',
-                    data: { id: id },
-                    success: function (response) {
-                        if (response.isSuccess) {
-                            alert(response.message);
-                            siparisleriGetir(); // Tabloyu yeniler
+                    data: { id: id, yeniDurum: durum },
+                    success: function (res) {
+                        if (res.isSuccess) {
+                            siparisleriGetir();
+                            alert(res.message);
                         } else {
-                            alert(response.message);
+                            alert('Hata: ' + res.message);
                         }
                     },
                     error: function () {
-                        alert("Sipariş iptal edilirken bir hata oluştu.");
+                        alert('Durum güncellenirken sunucu hatası oluştu!');
                     }
                 });
             }
         }
 
-        var seciliSiparisIdForFatura = null;
+        function siparisSil(id) {
+            siparisDurumDegistir(id, 'İptal Edildi');
+        }
 
-        // 16. SİPARİŞ DETAY MODALINI AÇ VE BİLGİLERİ GETİR
-        function siparisDetayModaliniAc(id) {
-            seciliSiparisIdForFatura = id;
-            $.ajax({
-                url: '/Siparis/SiparisDetayGetir',
-                type: 'GET',
-                data: { id: id },
-                success: function (response) {
-                    if (response.isSuccess) {
-                        var siparis = response.data.siparis;
-                        var detaylar = response.data.detaylar;
+        // 9. SİPARİŞ DÜZENLEME
+        function siparisDuzenleModalAc(id) {
+            $.get('/Siparis/SiparisGetir', { id: id }, function (res) {
+                if (res.isSuccess && res.data) {
+                    var d = res.data;
+                    $('#txtDuzenleSiparisId').val(d.siparisId);
+                    $('#lblDuzenleSiparisNo').val(d.siparisNumarasi);
+                    $('#ddlDuzenleSiparisTuru').val(d.siparisTuru);
+                    $('#hdnDuzenleCariId').val(d.cariId);
+                    $('#txtDuzenleCariAdi').val(d.cariAdi);
+                    $('#ddlDuzenleDepo').val(d.depoId);
+                    $('#txtDuzenleSiparisTarihi').val(d.siparisTarihi);
+                    $('#txtDuzenleVadeTarihi').val(d.vadeTarihi);
 
-                        // Modal başlık ve cari bilgilerini doldur
-                        $('#lblDetaySiparisNo').text(siparis.siparisNumarasi);
-                        $('#lblDetayTarih').text(siparis.siparisTarihi);
-                        $('#lblDetayCariAdi').text(siparis.cariAdi);
-                        $('#lblDetayCariKodu').text("Cari Kodu: " + (siparis.cariKodu || '-'));
-                        $('#lblDetayDepoAdi').text(siparis.depoAdi || 'Merkez Depo');
-
-                        // Kalemleri doldur
-                        var html = '';
-                        $.each(detaylar, function (index, item) {
-                            html += `<tr>
-                                        <td><span class="badge bg-light text-dark border">${item.urunKodu}</span></td>
-                                        <td class="fw-semibold">${item.urunAdi}</td>
-                                        <td class="text-center">${item.miktar}</td>
-                                        <td class="text-end">${item.birimFiyat.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
-                                        <td class="text-end fw-semibold text-dark">${item.satirToplam.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
-                                     </tr>`;
-                        });
-
-                        $('#detayUrunlerTabloGovdesi').html(html);
-                        $('#lblDetayGenelToplam').text(siparis.toplamTutar.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }));
-
-                        $('#siparisDetayModal').modal('show');
-                    } else {
-                        alert(response.message);
-                    }
-                },
-                error: function () {
-                    alert("Sipariş detayları yüklenirken bir hata oluştu.");
+                    $('#siparisDuzenleModal').modal('show');
+                } else {
+                    alert('Hata: ' + res.message);
                 }
             });
         }
 
-        // 17. FATURA YAZDIRMA FONKSİYONU
-        function faturaYazdir() {
-            if (seciliSiparisIdForFatura) {
-                // Fatura yazdırma sayfasını yeni sekmede açacağız
-                window.open('/Siparis/FaturaPdf?id=' + seciliSiparisIdForFatura, '_blank');
+        function siparisDuzenleKaydet() {
+            var model = {
+                SiparisId: $('#txtDuzenleSiparisId').val(),
+                SiparisTuru: $('#ddlDuzenleSiparisTuru').val(),
+                CariId: $('#hdnDuzenleCariId').val(),
+                DepoId: $('#ddlDuzenleDepo').val(),
+                SiparisTarihi: $('#txtDuzenleSiparisTarihi').val(),
+                VadeTarihi: $('#txtDuzenleVadeTarihi').val() || null
+            };
+
+            if (!model.CariId || !model.DepoId || !model.SiparisTarihi) {
+                alert('Lütfen tüm zorunlu alanları doldurun!');
+                return;
             }
+
+            $.ajax({
+                url: '/Siparis/SiparisGuncelle',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(model),
+                success: function (res) {
+                    if (res.isSuccess) {
+                        $('#siparisDuzenleModal').modal('hide');
+                        siparisleriGetir();
+                        alert(res.message);
+                    } else {
+                        alert('Hata: ' + res.message);
+                    }
+                },
+                error: function () {
+                    alert('Güncelleme sırasında sunucu hatası oluştu!');
+                }
+            });
+        }
+
+        // 10. SİPARİŞ DETAY MODALI AÇMA
+        function siparisDetayModaliniAc(id) {
+            $.get('/Siparis/SiparisDetayGetir', { id: id }, function (res) {
+                if (res.isSuccess && res.data) {
+                    var s = res.data.siparis;
+                    var detaylar = res.data.detaylar;
+
+                    $('#detaySiparisNo').text(s.siparisNumarasi);
+                    $('#detayCariAdi').text(s.cariAdi);
+                    $('#detayCariKodu').text('Kod: ' + s.cariKodu + ' (' + s.cariTuru + ')');
+                    $('#detayDepoAdi').text(s.depoAdi);
+                    $('#detaySiparisTarihi').text(s.siparisTarihi);
+                    $('#detayVadeTarihi').text(s.vadeTarihi);
+                    $('#detayGenelToplam').text(s.toplamTutar.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }));
+
+                    // Tür rozeti
+                    var turBadge = s.siparisTuru === 'Alış'
+                        ? '<span class="badge bg-warning bg-opacity-10 text-dark border border-warning fw-bold px-2 py-1">📦 Alış Siparişi</span>'
+                        : '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary fw-bold px-2 py-1">🛒 Satış Siparişi</span>';
+                    $('#detaySiparisTuruBadge').html(turBadge);
+
+                    // Durum rozeti
+                    var durumBadge = '';
+                    if (s.durum === 'Tamamlandı') {
+                        durumBadge = '<span class="badge bg-success bg-opacity-10 text-success border border-success fw-bold px-2 py-1">✅ Tamamlandı</span>';
+                    } else if (s.durum === 'İptal Edildi' || s.isDeleted) {
+                        durumBadge = '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-bold px-2 py-1">🚫 İptal Edildi</span>';
+                    } else {
+                        durumBadge = '<span class="badge bg-warning bg-opacity-10 text-dark border border-warning fw-bold px-2 py-1">⏳ Bekliyor</span>';
+                    }
+                    $('#detayDurumBadge').html(durumBadge);
+
+                    // Fatura linkini güncelle
+                    $('#btnDetayFaturaYazdir').off('click').on('click', function () {
+                        window.open('/Siparis/FaturaPdf/' + s.siparisId, '_blank');
+                    });
+
+                    // Kalemler tablosunu doldur
+                    var html = '';
+                    $.each(detaylar, function (i, item) {
+                        html += `<tr>
+                                    <td><span class="badge bg-light text-dark border">${item.urunKodu}</span></td>
+                                    <td class="fw-semibold">${item.urunAdi}</td>
+                                    <td class="text-center fw-bold text-primary">${item.miktar} Adet</td>
+                                    <td class="text-end">${item.birimFiyat.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+                                    <td class="text-end fw-bold">${item.satirToplam.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+                                 </tr>`;
+                    });
+                    $('#detayUrunlerTabloGovdesi').html(html);
+
+                    $('#siparisDetayModal').modal('show');
+                } else {
+                    alert('Hata: ' + res.message);
+                }
+            });
         }
     </script>
 }

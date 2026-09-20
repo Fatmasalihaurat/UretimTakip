@@ -3,13 +3,42 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-dark">📊 Stok Kontrolü</h2>
-    <div class="d-flex gap-3">
-        <input type="text" id="txtArama" class="form-control shadow-sm" placeholder="🔍 Ürün veya Stok Kodu Ara..." style="min-width: 250px;">
-        <button class="btn btn-primary fw-semibold shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#stokEkleModal">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="fw-bold text-dark mb-0">📊 Stok Kontrolü</h2>
+        <small class="text-muted" id="sayfaAltBaslik">Aktif depo stok durumları ve miktar yönetimi</small>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <!-- Aktif / Arşiv Filtresi -->
+        <div class="btn-group shadow-sm" role="group">
+            <button type="button" class="btn btn-sm btn-primary active fw-semibold" id="btnAktifStoklar">
+                📦 Aktif Stoklar
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" id="btnArsivStoklar">
+                📁 Arşivdekiler
+            </button>
+        </div>
+
+        <!-- Depo Filtre Dropdown -->
+        <select class="form-select form-select-sm shadow-sm" id="ddlDepoFiltre" style="width: auto; min-width: 170px;">
+            <option value="">🏢 Tüm Depolar</option>
+        </select>
+
+        <!-- Arama Kutusu -->
+        <input type="text" id="txtArama" class="form-control form-control-sm shadow-sm" placeholder="🔍 Ürün, Depo veya Stok Kodu..." style="min-width: 220px;">
+
+        <!-- Yeni Stok Butonu -->
+        <button class="btn btn-primary btn-sm fw-semibold shadow-sm text-nowrap" id="btnYeniStokModalAc" data-bs-toggle="modal" data-bs-target="#stokEkleModal">
             ➕ Yeni Stok Tanımla
         </button>
+    </div>
+</div>
+
+<!-- Arşiv Bilgi Kutusu -->
+<div id="arsivBilgiKutusu" class="alert alert-secondary border-0 shadow-sm d-flex align-items-center mb-3 py-2 px-3" style="display: none;">
+    <span class="fs-4 me-2">📁</span>
+    <div class="small">
+        <strong>Arşiv Kayıtları:</strong> Bu sayfadaki stok kayıtları geçmiş sipariş, fatura ve irsaliye kayıtlarının bütünlüğü için veritabanında saklanmaktadır. Dilediğinizde <strong>"Geri Yükle"</strong> butonuna basarak tekrar aktif stok havuzuna dahil edebilirsiniz.
     </div>
 </div>
 
@@ -42,7 +71,7 @@
 <!-- Yeni Stok Tanımlama Modalı -->
 <div class="modal fade" id="stokEkleModal" tabindex="-1" aria-labelledby="stokEkleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content shadow">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold" id="stokEkleModalLabel">✨ Yeni Stok Tanımla</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
@@ -82,7 +111,7 @@
 <!-- Stok Güncelleme Modalı (Mevcut Miktar Revizesi İçin) -->
 <div class="modal fade" id="stokGuncelleModal" tabindex="-1" aria-labelledby="stokGuncelleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content shadow">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold" id="stokGuncelleModalLabel">🔄 Stok Miktarını Güncelle</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
@@ -134,45 +163,130 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            var seciliDepoId = '@ViewBag.SeciliDepoId';
+            var urlParams = new URLSearchParams(window.location.search);
+            var seciliDepoId = urlParams.get('depoId') || '@ViewBag.SeciliDepoId' || '';
+            var arsivModu = false;
+
+            // Depolar ve Ürünler dropdown'larını doldur
+            depolariveUrunleriGetir();
 
             // Sayfa yüklendiğinde stok verilerini otomatik getir
             stoklariGetir();
-            // Dropdown listelerini (Ürün ve Depo) doldur
-            depolariveUrunleriGetir();
+
+            // Aktif / Arşiv Filtre Butonları
+            $('#btnAktifStoklar').click(function () {
+                arsivModu = false;
+                $(this).removeClass('btn-outline-primary').addClass('btn-primary active');
+                $('#btnArsivStoklar').removeClass('btn-secondary active').addClass('btn-outline-secondary');
+                $('#sayfaAltBaslik').text('Aktif depo stok durumları ve miktar yönetimi');
+                $('#btnYeniStokModalAc').show();
+                $('#arsivBilgiKutusu').slideUp(200);
+                stoklariGetir();
+            });
+
+            $('#btnArsivStoklar').click(function () {
+                arsivModu = true;
+                $(this).removeClass('btn-outline-secondary').addClass('btn-secondary active');
+                $('#btnAktifStoklar').removeClass('btn-primary active').addClass('btn-outline-primary');
+                $('#sayfaAltBaslik').text('Arşivlenen stoklar (Veritabanında korunan geçmiş kayıtlar)');
+                $('#btnYeniStokModalAc').hide();
+                $('#arsivBilgiKutusu').slideDown(200);
+                stoklariGetir();
+            });
+
+            // Depo filtre seçimi değiştiğinde
+            $('#ddlDepoFiltre').change(function () {
+                stoklariGetir();
+            });
+
+            // Arama kutusu için canlı filtreleme
+            $('#txtArama').on('keyup', function () {
+                stoklariGetir();
+            });
 
             // 1. Stokları Getirme Fonksiyonu (AJAX GET)
             function stoklariGetir() {
-                var urlParams = new URLSearchParams(window.location.search);
-                var depoId = urlParams.get('depoId') || seciliDepoId;
-                var aramaKelimesi = $('#txtArama').val();
+                var filtreDepoId = $('#ddlDepoFiltre').val() || seciliDepoId;
+                var aramaKelimesi = $('#txtArama').val().trim();
 
                 $.ajax({
                     url: '/Stok/StoklariListele',
                     type: 'GET',
-                    data: { depoId: depoId, aramaKelimesi: aramaKelimesi },
+                    data: { 
+                        depoId: filtreDepoId ? filtreDepoId : null, 
+                        aramaKelimesi: aramaKelimesi,
+                        arsivdekiler: arsivModu
+                    },
                     dataType: 'json',
                     success: function (response) {
                         var html = '';
                         if (response.isSuccess && response.data.length > 0) {
                             $.each(response.data, function (index, item) {
+                                // Miktar rozeti
+                                var miktarBadge = '';
+                                if (arsivModu) {
+                                    miktarBadge = `<span class="badge bg-secondary bg-opacity-25 text-secondary border border-secondary px-2 py-1">
+                                                       📁 ${item.miktar} Adet (Arşivde)
+                                                   </span>`;
+                                } else if (item.miktar > 10) {
+                                    miktarBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success fw-bold px-2 py-1">
+                                                       ✅ ${item.miktar} Adet
+                                                   </span>`;
+                                } else if (item.miktar > 0) {
+                                    miktarBadge = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning fw-bold px-2 py-1">
+                                                       ⚠️ ${item.miktar} Adet (Kritik)
+                                                   </span>`;
+                                } else {
+                                    miktarBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-bold px-2 py-1">
+                                                       ⛔ 0 Adet (Tükendi)
+                                                   </span>`;
+                                }
+
+                                // İşlem butonları
+                                var islemButonlari = '';
+                                if (!arsivModu) {
+                                    var silButonu = '';
+                                    if (item.silinebilirMi || item.miktar === 0) {
+                                        silButonu = `<button class="btn btn-sm btn-danger py-1" onclick="stokSil('${item.stokId}', '${item.urunAdi}', '${item.depoAdi}')" title="Sıfır miktarlı stoğu arşivle">
+                                                        🚫 Sil
+                                                     </button>`;
+                                    } else {
+                                        silButonu = `<button class="btn btn-sm btn-outline-danger py-1" onclick="stokSilEngelli('${item.urunAdi}', '${item.depoAdi}', ${item.miktar})" title="Stoğu bulunan kayıt silinemez!">
+                                                        🚫 Sil
+                                                     </button>`;
+                                    }
+
+                                    islemButonlari = `
+                                        <button class="btn btn-sm btn-outline-primary py-1 me-1" onclick="stokGuncelleModalAc('${item.stokId}', '${item.depoAdi}', '${item.urunAdi}', ${item.miktar})">
+                                            🔄 Güncelle
+                                        </button>
+                                        ${silButonu}
+                                    `;
+                                } else {
+                                    islemButonlari = `
+                                        <button class="btn btn-sm btn-success py-1 fw-semibold" onclick="stokGeriYukle('${item.stokId}', '${item.urunAdi}', '${item.depoAdi}')">
+                                            ♻️ Geri Yükle
+                                        </button>
+                                    `;
+                                }
+
                                 html += `<tr>
                                             <td class="ps-4 fw-semibold">${item.depoAdi}</td>
                                             <td>${item.urunAdi}</td>
                                             <td><span class="badge bg-light text-dark border">${item.stokKodu || '-'}</span></td>
-                                            <td><span class="fw-bold text-primary">${item.miktar} Adet</span></td>
+                                            <td>${miktarBadge}</td>
                                             <td>${item.sonGuncellenmeTarihi || '-'}</td>
                                             <td class="text-end pe-4">
-                                                <button class="btn btn-sm btn-outline-primary py-1 me-2" onclick="stokGuncelleModalAc('${item.stokId}', '${item.depoAdi}', '${item.urunAdi}', ${item.miktar})">
-                                                    🔄 Güncelle
-                                                </button>
-                                                ${item.miktar === 0 ? `<button class="btn btn-sm btn-outline-danger py-1" onclick="stokSil('${item.stokId}')">🗑️ Sil</button>` : ''}
+                                                ${islemButonlari}
                                             </td>
                                          </tr>`;
                             });
                         } else {
+                            var bosMesaj = arsivModu 
+                                ? "📁 Arşivde listelenecek stok kaydı bulunamadı." 
+                                : "📂 Aktif listelenecek stok kaydı bulunamadı.";
                             html = `<tr>
-                                        <td colspan="6" class="text-center text-muted py-4">📂 Listelenecek stok kaydı bulunamadı.</td>
+                                        <td colspan="6" class="text-center text-muted py-4">${bosMesaj}</td>
                                     </tr>`;
                         }
                         $('#stokTabloGovdesi').html(html);
@@ -183,6 +297,11 @@
                 });
             }
 
+            // Stoğu sıfır olmayan kaydın silinmeye çalışılması durumunda gösterilen engel uyarısı
+            window.stokSilEngelli = function (urunAdi, depoAdi, miktar) {
+                alert(`⚠️ Stoğu Olan Kayıt Silinemez!\n\n"${depoAdi}" deposundaki "${urunAdi}" ürününe ait ${miktar} adet stok bulunmaktadır.\n\nBir stok kaydını silebilmek (arşivlemek) için depodaki stok miktarının sıfır (0) olması gerekir.\n\nLütfen önce 'Güncelle' butonunu kullanarak stoğu sıfırlayın veya sipariş/çıkış işlemlerini tamamlayın.`);
+            };
+
             // 2. Ürün ve Depo Dropdown'larını doldurma fonksiyonu (AJAX GET)
             function depolariveUrunleriGetir() {
                 // Depoları çek
@@ -192,11 +311,17 @@
                     dataType: 'json',
                     success: function (response) {
                         if (response.isSuccess) {
-                            var options = '<option value="">-- Depo Seçin --</option>';
+                            var optionsModal = '<option value="">-- Depo Seçin --</option>';
+                            var optionsFiltre = '<option value="">🏢 Tüm Depolar</option>';
+
                             $.each(response.data, function (index, item) {
-                                options += `<option value="${item.depoId}">${item.depoAdi}</option>`;
+                                var isSelected = (seciliDepoId && seciliDepoId.toLowerCase() === item.depoId.toLowerCase()) ? 'selected' : '';
+                                optionsModal += `<option value="${item.depoId}">${item.depoAdi}</option>`;
+                                optionsFiltre += `<option value="${item.depoId}" ${isSelected}>🏢 ${item.depoAdi}</option>`;
                             });
-                            $('#ddlDepo').html(options);
+
+                            $('#ddlDepo').html(optionsModal);
+                            $('#ddlDepoFiltre').html(optionsFiltre);
                         }
                     }
                 });
@@ -240,9 +365,9 @@
                     data: JSON.stringify(model),
                     success: function (response) {
                         if (response.isSuccess) {
-                            $('#stokEkleModal').modal('hide'); // Modalı kapat
-                            $('#stokEkleFormu')[0].reset(); // Formu temizle
-                            stoklariGetir(); // Tabloyu yenile
+                            $('#stokEkleModal').modal('hide');
+                            $('#stokEkleFormu')[0].reset();
+                            stoklariGetir();
                             alert(response.message);
                         } else {
                             alert('Hata: ' + response.message);
@@ -254,23 +379,17 @@
                 });
             });
 
-            // Arama kutusu için anlık filtreleme
-            $('#txtArama').on('keyup', function () {
-                stoklariGetir();
-            });
-
             // 4. Güncelleme Modalı Açma Fonksiyonu
             window.stokGuncelleModalAc = function (stokId, depoAdi, urunAdi, mevcutMiktar) {
                 $('#hdnStokId').val(stokId);
                 $('#lblDepoAdi').val(depoAdi);
                 $('#lblUrunAdi').val(urunAdi);
                 $('#txtMevcutMiktar').val(mevcutMiktar);
-                $('#txtIslemMiktari').val(''); // Temizle
-                $('#rdEkle').prop('checked', true); // Varsayılan Ekle
+                $('#txtIslemMiktari').val('');
+                $('#rdEkle').prop('checked', true);
                 
-                // Modalı ekranda göster
                 $('#stokGuncelleModal').modal('show');
-            }
+            };
 
             // 5. Stok Miktarı Güncelleme Kaydetme Fonksiyonu (AJAX POST)
             $('#btnStokKaydet').click(function () {
@@ -305,8 +424,8 @@
                     },
                     success: function (response) {
                         if (response.isSuccess) {
-                            $('#stokGuncelleModal').modal('hide'); // Modalı kapat
-                            stoklariGetir(); // Tabloyu tazele
+                            $('#stokGuncelleModal').modal('hide');
+                            stoklariGetir();
                             alert(response.message);
                         } else {
                             alert('Hata: ' + response.message);
@@ -318,9 +437,10 @@
                 });
             });
 
-            // 6. Stok Silme Fonksiyonu (AJAX POST)
-            window.stokSil = function(stokId) {
-                if(confirm("Bu sıfır miktarlı stok kaydını arşivlemek istediğinize emin misiniz?\n\n(Not: İlgili ürün kaydı veritabanında arşiv ve genel katalog için korunmaya devam edecektir.)")) {
+            // 6. Sıfır Miktarlı Stoğu Arşivleme (Soft-Delete) Fonksiyonu
+            window.stokSil = function (stokId, urunAdi, depoAdi) {
+                var onay = confirm(`"${depoAdi}" deposundaki "${urunAdi}" stok kaydını silmek (arşivlemek) istediğinize emin misiniz?\n\nℹ️ Not: Kayıt veritabanından tamamen silinmeyecek, geçmiş sipariş ve fatura hareketlerinin bütünlüğü için arşivde saklanmaya devam edecektir.`);
+                if (onay) {
                     $.ajax({
                         url: '/Stok/StokSil',
                         type: 'POST',
@@ -338,7 +458,30 @@
                         }
                     });
                 }
-            }
+            };
+
+            // 7. Arşivdeki Stoğu Yeniden Aktifleştirme (Restore) Fonksiyonu
+            window.stokGeriYukle = function (stokId, urunAdi, depoAdi) {
+                var onay = confirm(`"${depoAdi}" deposundaki "${urunAdi}" stok kaydını arşivden çıkarıp tekrar aktif stoklar listesine dahil etmek istiyor musunuz?`);
+                if (onay) {
+                    $.ajax({
+                        url: '/Stok/StokGeriYukle',
+                        type: 'POST',
+                        data: { id: stokId },
+                        success: function (response) {
+                            if (response.isSuccess) {
+                                stoklariGetir();
+                                alert(response.message);
+                            } else {
+                                alert('Hata: ' + response.message);
+                            }
+                        },
+                        error: function () {
+                            alert('Geri yükleme işlemi sırasında sunucu hatası oluştu!');
+                        }
+                    });
+                }
+            };
         });
     </script>
 }

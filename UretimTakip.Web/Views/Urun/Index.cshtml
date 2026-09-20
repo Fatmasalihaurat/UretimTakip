@@ -183,7 +183,7 @@
                                     var silButonu = '';
                                     if (item.toplamStok === 0) {
                                         silButonu = `<button class="btn btn-sm btn-danger py-1" onclick="urunSil('${item.id}', '${item.ad}')" title="Ürünü Arşivle (Sil)">
-                                                        🗑️ Sil
+                                                        🚫 Sil
                                                      </button>`;
                                     } else {
                                         silButonu = `<button class="btn btn-sm btn-outline-danger py-1" onclick="urunSilEngelli('${item.ad}', ${item.toplamStok})" title="Stoğu bulunan ürün silinemez!">

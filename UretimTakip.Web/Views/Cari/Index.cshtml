@@ -1,22 +1,38 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
-}
 @{
     ViewData["Title"] = "Cari Yönetimi";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<!-- 1. HEADER BAR -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-dark">👥 Cari Yönetimi (Müşteri & Tedarikçi)</h2>
-    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#cariEkleModal">
-        ➕ Yeni Cari Ekle
-    </button>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="fw-bold text-dark mb-0">👥 Cari Yönetimi</h2>
+        <small class="text-muted" id="sayfaAltBaslik">Müşteri ve tedarikçi hesapları portföyü</small>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <!-- Cari Türü Filtre Butonları -->
+        <div class="btn-group shadow-sm" role="group">
+            <button type="button" class="btn btn-sm btn-primary active fw-semibold" id="btnFiltreTumu">
+                🌐 Tümü
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info fw-semibold" id="btnFiltreMusteri">
+                👤 Müşteriler
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-warning fw-semibold text-dark" id="btnFiltreTedarikci">
+                🏢 Tedarikçiler
+            </button>
+        </div>
+
+        <!-- Arama Kutusu -->
+        <input type="text" id="txtArama" class="form-control form-control-sm shadow-sm" placeholder="🔍 Cari Adı veya Kodu ara..." style="min-width: 230px;">
+
+        <!-- Yeni Cari Butonu -->
+        <button class="btn btn-primary btn-sm fw-semibold shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#cariEkleModal">
+            ➕ Yeni Cari Ekle
+        </button>
+    </div>
 </div>
 
-<!-- 2. TABLE SECTION -->
+<!-- CARİ TABLOSU -->
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -41,12 +57,12 @@
     </div>
 </div>
 
-<!-- 3. MODAL POP-UP FORM -->
+<!-- 1. YENİ CARİ EKLE MODALI -->
 <div class="modal fade" id="cariEkleModal" tabindex="-1" aria-labelledby="cariEkleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content shadow">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold" id="cariEkleModalLabel">✨ Yeni Cari Ekle</h5>
+                <h5 class="modal-title fw-bold" id="cariEkleModalLabel">✨ Yeni Cari Tanımla</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
             <div class="modal-body">
@@ -60,12 +76,21 @@
                         <input type="text" class="form-control" id="txtCariAd" required placeholder="Örn: Ahmet Yılmaz A.Ş.">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Cari Türü</label>
-                        <select class="form-select" id="selectCariTuru" required>
-                            <option value="">Seçiniz...</option>
-                            <option value="Müşteri">Müşteri</option>
-                            <option value="Tedarikçi">Tedarikçi</option>
-                        </select>
+                        <label class="form-label fw-semibold d-block">Cari Türü Seçimi</label>
+                        <div class="d-flex gap-3 mt-1">
+                            <div class="form-check p-2 border rounded flex-fill">
+                                <input class="form-check-input ms-1 me-2" type="radio" name="rdCariTuruEkle" id="rdEkleMusteri" value="Müşteri" checked>
+                                <label class="form-check-label fw-semibold text-info" for="rdEkleMusteri">
+                                    👤 Müşteri
+                                </label>
+                            </div>
+                            <div class="form-check p-2 border rounded flex-fill">
+                                <input class="form-check-input ms-1 me-2" type="radio" name="rdCariTuruEkle" id="rdEkleTedarikci" value="Tedarikçi">
+                                <label class="form-check-label fw-semibold text-warning text-dark" for="rdEkleTedarikci">
+                                    🏢 Tedarikçi
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -77,36 +102,138 @@
     </div>
 </div>
 
-<!-- 4. JAVASCRIPT / JQUERY AJAX LOGIC -->
+<!-- 2. CARİ DÜZENLE MODALI -->
+<div class="modal fade" id="cariDuzenleModal" tabindex="-1" aria-labelledby="cariDuzenleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold" id="cariDuzenleModalLabel">✏️ Cari Bilgilerini Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cariDuzenleFormu">
+                    <!-- Düzenlenen Cari ID -->
+                    <input type="hidden" id="txtDuzenleCariId" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Cari Kodu</label>
+                        <input type="text" class="form-control" id="txtDuzenleCariKodu" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Cari Adı / Unvanı</label>
+                        <input type="text" class="form-control" id="txtDuzenleCariAd" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold d-block">Cari Türü Seçimi</label>
+                        <div class="d-flex gap-3 mt-1">
+                            <div class="form-check p-2 border rounded flex-fill">
+                                <input class="form-check-input ms-1 me-2" type="radio" name="rdCariTuruDuzenle" id="rdDuzenleMusteri" value="Müşteri">
+                                <label class="form-check-label fw-semibold text-info" for="rdDuzenleMusteri">
+                                    👤 Müşteri
+                                </label>
+                            </div>
+                            <div class="form-check p-2 border rounded flex-fill">
+                                <input class="form-check-input ms-1 me-2" type="radio" name="rdCariTuruDuzenle" id="rdDuzenleTedarikci" value="Tedarikçi">
+                                <label class="form-check-label fw-semibold text-warning text-dark" for="rdDuzenleTedarikci">
+                                    🏢 Tedarikçi
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" id="btnCariGuncelle" class="btn btn-warning fw-semibold">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         $(document).ready(function () {
-            // Sayfa yüklendiğinde carileri otomatik listele
+            var aktifCariTuruFiltresi = '';
+
+            // Sayfa açıldığında carileri getir
             carileriGetir();
+
+            // Filtre Buton Aksiyonları
+            $('#btnFiltreTumu').click(function () {
+                aktifCariTuruFiltresi = '';
+                $(this).removeClass('btn-outline-primary').addClass('btn-primary active');
+                $('#btnFiltreMusteri').removeClass('btn-info text-white active').addClass('btn-outline-info');
+                $('#btnFiltreTedarikci').removeClass('btn-warning active').addClass('btn-outline-warning');
+                $('#sayfaAltBaslik').text('Tüm müşteri ve tedarikçi hesapları');
+                carileriGetir();
+            });
+
+            $('#btnFiltreMusteri').click(function () {
+                aktifCariTuruFiltresi = 'Müşteri';
+                $(this).removeClass('btn-outline-info').addClass('btn-info text-white active');
+                $('#btnFiltreTumu').removeClass('btn-primary active').addClass('btn-outline-primary');
+                $('#btnFiltreTedarikci').removeClass('btn-warning active').addClass('btn-outline-warning');
+                $('#sayfaAltBaslik').text('Sadece Müşteri hesapları listeleniyor');
+                carileriGetir();
+            });
+
+            $('#btnFiltreTedarikci').click(function () {
+                aktifCariTuruFiltresi = 'Tedarikçi';
+                $(this).removeClass('btn-outline-warning').addClass('btn-warning active');
+                $('#btnFiltreTumu').removeClass('btn-primary active').addClass('btn-outline-primary');
+                $('#btnFiltreMusteri').removeClass('btn-info text-white active').addClass('btn-outline-info');
+                $('#sayfaAltBaslik').text('Sadece Tedarikçi hesapları listeleniyor');
+                carileriGetir();
+            });
+
+            // Arama kutusuna yazıldığında anlık filtreleme
+            $('#txtArama').on('keyup', function () {
+                carileriGetir();
+            });
 
             // 1. CARİLERİ LİSTELEYEN AJAX FONKSİYONU
             function carileriGetir() {
+                var aramaMetni = $('#txtArama').val().trim();
+
                 $.ajax({
                     url: '/Cari/CarileriListele',
                     type: 'GET',
+                    data: {
+                        aramaKelimesi: aramaMetni,
+                        cariTuru: aktifCariTuruFiltresi
+                    },
                     dataType: 'json',
                     success: function (response) {
                         var html = '';
                         if (response.isSuccess && response.data.length > 0) {
                             $.each(response.data, function (index, item) {
-                                var badgeClass = item.cariTuru === 'Müşteri' ? 'bg-info' : 'bg-warning text-dark';
+                                var badgeHtml = '';
+                                if (item.cariTuru === 'Müşteri') {
+                                    badgeHtml = `<span class="badge bg-info bg-opacity-10 text-info border border-info fw-bold px-2 py-1">
+                                                    👤 Müşteri
+                                                 </span>`;
+                                } else {
+                                    badgeHtml = `<span class="badge bg-warning bg-opacity-10 text-dark border border-warning fw-bold px-2 py-1">
+                                                    🏢 Tedarikçi
+                                                 </span>`;
+                                }
+
                                 html += `<tr>
                                             <td class="ps-4"><span class="badge bg-light text-dark border">${item.cariKodu}</span></td>
                                             <td class="fw-semibold">${item.ad}</td>
-                                            <td><span class="badge ${badgeClass}">${item.cariTuru}</span></td>
+                                            <td>${badgeHtml}</td>
                                             <td class="text-end pe-4">
-                                                <button class="btn btn-sm btn-danger py-1" onclick="cariSil('${item.id}')">🗑️ Sil</button>
+                                                <button class="btn btn-sm btn-warning py-1 me-1 fw-semibold" onclick="cariDuzenleGetir('${item.id}')">✏️ Düzenle</button>
+                                                <button class="btn btn-sm btn-danger py-1" onclick="cariSil('${item.id}', '${item.ad}')">🚫 Sil</button>
                                             </td>
                                          </tr>`;
                             });
                         } else {
+                            var bosMesaj = aktifCariTuruFiltresi 
+                                ? `📂 Listelenecek ${aktifCariTuruFiltresi.toLowerCase()} kaydı bulunamadı.` 
+                                : '📂 Listelenecek cari hesap kaydı bulunamadı.';
                             html = `<tr>
-                                        <td colspan="4" class="text-center text-muted py-4">📂 Listelenecek cari bulunamadı.</td>
+                                        <td colspan="4" class="text-center text-muted py-4">${bosMesaj}</td>
                                     </tr>`;
                         }
                         $('#cariTabloGovdesi').html(html);
@@ -120,13 +247,13 @@
             // 2. YENİ CARİ EKLEYEN AJAX FONKSİYONU
             $('#btnCariKaydet').click(function () {
                 var model = {
-                    CariKodu: $('#txtCariKodu').val(),
-                    Ad: $('#txtCariAd').val(),
-                    CariTuru: $('#selectCariTuru').val()
+                    CariKodu: $('#txtCariKodu').val().trim(),
+                    Ad: $('#txtCariAd').val().trim(),
+                    CariTuru: $('input[name="rdCariTuruEkle"]:checked').val()
                 };
 
                 if (!model.CariKodu || !model.Ad || !model.CariTuru) {
-                    alert('Lütfen tüm alanları doldurun!');
+                    alert('Lütfen cari kodu, cari adı ve tür alanlarını eksiksiz doldurun!');
                     return;
                 }
 
@@ -139,7 +266,8 @@
                         if (response.isSuccess) {
                             $('#cariEkleModal').modal('hide');
                             $('#cariEkleFormu')[0].reset();
-                            carileriGetir(); // Tabloyu tazele
+                            $('#rdEkleMusteri').prop('checked', true);
+                            carileriGetir();
                             alert(response.message);
                         } else {
                             alert('Hata: ' + response.message);
@@ -150,29 +278,93 @@
                     }
                 });
             });
-                    // 3. CARİ SİLME AKSİYONU
-        window.cariSil = function (id) {
-            if (confirm('Bu cari kaydını silmek istediğinize emin misiniz?')) {
+
+            // 3. CARİ DÜZENLEME İÇİN BİLGİLERİ GETİREN FONKSİYON
+            window.cariDuzenleGetir = function (id) {
                 $.ajax({
-                    url: '/Cari/CariSil', // İstek atılacak adres
-                    type: 'POST',
+                    url: '/Cari/CariGetir',
+                    type: 'GET',
                     data: { id: id },
                     success: function (response) {
+                        if (response.isSuccess && response.data) {
+                            var data = response.data;
+                            $('#txtDuzenleCariId').val(data.id);
+                            $('#txtDuzenleCariKodu').val(data.cariKodu);
+                            $('#txtDuzenleCariAd').val(data.ad);
+
+                            if (data.cariTuru === 'Tedarikçi') {
+                                $('#rdDuzenleTedarikci').prop('checked', true);
+                            } else {
+                                $('#rdDuzenleMusteri').prop('checked', true);
+                            }
+
+                            $('#cariDuzenleModal').modal('show');
+                        } else {
+                            alert('Hata: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Cari bilgisi getirilirken sunucu hatası oluştu!');
+                    }
+                });
+            };
+
+            // 4. CARİ GÜNCELLEME AKSİYONU
+            $('#btnCariGuncelle').click(function () {
+                var model = {
+                    Id: $('#txtDuzenleCariId').val(),
+                    CariKodu: $('#txtDuzenleCariKodu').val().trim(),
+                    Ad: $('#txtDuzenleCariAd').val().trim(),
+                    CariTuru: $('input[name="rdCariTuruDuzenle"]:checked').val()
+                };
+
+                if (!model.CariKodu || !model.Ad || !model.CariTuru) {
+                    alert('Lütfen tüm alanları eksiksiz doldurun!');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Cari/CariGuncelle',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(model),
+                    success: function (response) {
                         if (response.isSuccess) {
-                            carileriGetir(); // Başarılıysa tabloyu yenile
+                            $('#cariDuzenleModal').modal('hide');
+                            carileriGetir();
                             alert(response.message);
                         } else {
                             alert('Hata: ' + response.message);
                         }
                     },
                     error: function () {
-                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                        alert('Güncelleme sırasında sunucu hatası oluştu!');
                     }
                 });
-            }
-        };
+            });
 
+            // 5. CARİ SİLME AKSİYONU
+            window.cariSil = function (id, cariAdi) {
+                var onay = confirm(`"${cariAdi}" cari kaydını silmek istediğinize emin misiniz?`);
+                if (onay) {
+                    $.ajax({
+                        url: '/Cari/CariSil',
+                        type: 'POST',
+                        data: { id: id },
+                        success: function (response) {
+                            if (response.isSuccess) {
+                                carileriGetir();
+                                alert(response.message);
+                            } else {
+                                alert('Hata: ' + response.message);
+                            }
+                        },
+                        error: function () {
+                            alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                        }
+                    });
+                }
+            };
         });
     </script>
 }
- 

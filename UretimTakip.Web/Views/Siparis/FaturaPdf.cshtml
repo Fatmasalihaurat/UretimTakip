@@ -117,9 +117,9 @@
             </div>
         </div>
         <div>
-            <div class="invoice-title">FATURA</div>
+            <div class="invoice-title">@(Model.SiparisTuru == "Alış" ? "ALIŞ FATURASI" : "SATIŞ FATURASI")</div>
             <div class="text-end text-muted small mt-1">
-                Fatura No: <strong class="text-dark">@Model.SiparisNumarasi</strong>
+                Belge No: <strong class="text-dark">@Model.SiparisNumarasi</strong>
             </div>
         </div>
     </div>
@@ -127,17 +127,22 @@
     <!-- Info Section -->
     <div class="row mb-5">
         <div class="col-6">
-            <div class="info-label">MÜŞTERİ (CARİ) BİLGİLERİ</div>
+            <div class="info-label">@(Model.SiparisTuru == "Alış" ? "TEDARİKÇİ (CARİ) BİLGİLERİ" : "MÜŞTERİ (CARİ) BİLGİLERİ")</div>
             <div class="info-value">@Model.CariAdi</div>
             <div class="text-muted small">Cari Kodu: @Model.CariKodu</div>
-            <div class="text-muted small">Müşteri Türü: @Model.CariTuru</div>
+            <div class="text-muted small">Cari Türü: @Model.CariTuru</div>
         </div>
         <div class="col-6 text-end">
-            <div class="info-label">FATURA TARİHİ</div>
-            <div class="info-value">@Model.SiparisTarihi.ToString("dd.MM.yyyy HH:mm")</div>
-            <div class="info-label mt-2">ÇIKIŞ DEPOSU</div>
+            <div class="info-label">SİPARİŞ TARİHİ</div>
+            <div class="info-value">@Model.SiparisTarihi.ToString("dd.MM.yyyy")</div>
+            @if (Model.VadeTarihi.HasValue)
+            {
+                <div class="info-label mt-2">@(Model.SiparisTuru == "Alış" ? "TEMİN / TESLİM TARİHİ" : "VADE / ÖDEME TARİHİ")</div>
+                <div class="info-value text-primary">@Model.VadeTarihi.Value.ToString("dd.MM.yyyy")</div>
+            }
+            <div class="info-label mt-2">@(Model.SiparisTuru == "Alış" ? "GİRİŞ DEPOSU" : "ÇIKIŞ DEPOSU")</div>
             <div class="info-value">@Model.DepoAdi</div>
-            <div class="info-label mt-2">SİPARİŞ DURUMU</div>
+            <div class="info-label mt-2">DURUM</div>
             <div>
                 <span class="badge bg-success text-white badge-invoice">@Model.Durum</span>
             </div>

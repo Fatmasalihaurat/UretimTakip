@@ -11,7 +11,10 @@ namespace UretimTakip.core.Entities
         public Guid CariId { get; set; } = Guid.NewGuid();
         public Guid? DepoId { get; set; }
         public DateTime SiparisTarihi { get; set; } = DateTime.Now;
-        public  decimal ToplamTutar { get; set; }
+        public DateTime? VadeTarihi { get; set; }
+        public DateTime OlusturulmaTarihi { get; set; } = DateTime.UtcNow;
+        public string SiparisTuru { get; set; } = "Satış"; // "Satış" veya "Alış"
+        public decimal ToplamTutar { get; set; }
         public string Durum { get; set; } = "Bekliyor";
         public bool IsDeleted { get; set; } = false;
     }

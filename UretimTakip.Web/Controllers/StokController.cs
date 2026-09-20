@@ -25,15 +25,17 @@ namespace UretimTakip.Web.Controllers
 
         // Stokları Ürün ve Depo Adıyla Birlikte Getiren AJAX Metodu
         [HttpGet]
-        public IActionResult StoklariListele(Guid? depoId, string? aramaKelimesi = null)
+        public IActionResult StoklariListele(Guid? depoId, string? aramaKelimesi = null, bool arsivdekiler = false)
         {
             try
             {
-                // Stok silinmemiş (!s.IsDeleted), ürün silinmemiş (!u.IsDeleted) ve depo arşivlenmemiş (!d.IsArchived) olanları getiriyoruz.
+                // Silinmiş (arşivlenmiş) veya aktif stoklar
                 var sorgu = from s in _context.Stoklar
-                            join u in _context.Urunler on s.UrunId equals u.UrunId
-                            join d in _context.Depolar on s.DepoId equals d.DepoId
-                            where !s.IsDeleted && !u.IsDeleted && !d.IsArchived
+                            join u in _context.Urunler on s.UrunId equals u.UrunId into urunGroup
+                            from u in urunGroup.DefaultIfEmpty()
+                            join d in _context.Depolar on s.DepoId equals d.DepoId into depoGroup
+                            from d in depoGroup.DefaultIfEmpty()
+                            where s.IsDeleted == arsivdekiler
                             select new { s, u, d };
 
                 if (depoId.HasValue)
@@ -44,8 +46,9 @@ namespace UretimTakip.Web.Controllers
                 if (!string.IsNullOrEmpty(aramaKelimesi))
                 {
                     aramaKelimesi = aramaKelimesi.ToLower();
-                    sorgu = sorgu.Where(x => x.u.UrunAdi.ToLower().Contains(aramaKelimesi) || 
-                                             x.s.StokKodu.ToLower().Contains(aramaKelimesi));
+                    sorgu = sorgu.Where(x => (x.u != null && x.u.UrunAdi.ToLower().Contains(aramaKelimesi)) || 
+                                             (x.s.StokKodu != null && x.s.StokKodu.ToLower().Contains(aramaKelimesi)) ||
+                                             (x.d != null && x.d.DepoAdi.ToLower().Contains(aramaKelimesi)));
                 }
 
                 var stoklar = sorgu.ToList().Select(x => new
@@ -54,10 +57,12 @@ namespace UretimTakip.Web.Controllers
                     StokKodu = x.s.StokKodu,
                     UrunId = x.s.UrunId,
                     DepoId = x.s.DepoId,
-                    UrunAdi = x.u.UrunAdi,
-                    DepoAdi = x.d.DepoAdi,
+                    UrunAdi = x.u != null ? x.u.UrunAdi : "Bilinmeyen / Silinmiş Ürün",
+                    DepoAdi = x.d != null ? x.d.DepoAdi : "Bilinmeyen / Arşivlenmiş Depo",
                     Miktar = x.s.Miktar,
-                    SonGuncellenmeTarihi = x.s.SonGuncellenmeTarihi.ToString("dd.MM.yyyy HH:mm")
+                    SonGuncellenmeTarihi = x.s.SonGuncellenmeTarihi.ToString("dd.MM.yyyy HH:mm"),
+                    IsDeleted = x.s.IsDeleted,
+                    SilinebilirMi = (x.s.Miktar == 0)
                 }).ToList();
 
                 return Json(ResultDto<object>.Success(stoklar, "Stoklar başarıyla getirildi."));
@@ -183,20 +188,15 @@ namespace UretimTakip.Web.Controllers
                     return Json(ResultDto.Failure("Stok kaydı bulunamadı!"));
                 }
 
-                if (yeniMiktar == 0)
-                {
-                    stok.IsDeleted = true;
-                    stok.Miktar = 0;
-                    stok.SonGuncellenmeTarihi = DateTime.Now;
-                    _context.SaveChanges();
-                    return Json(ResultDto.Success("Stok miktarı 0 olduğu için stok kaydı arşivlendi!"));
-                }
-
-                // Stok miktarını güncelle ve son güncelleme tarihini yenile
                 stok.Miktar = yeniMiktar;
-                stok.SonGuncellenmeTarihi = DateTime.Now;
+                stok.SonGuncellenmeTarihi = DateTime.UtcNow;
 
                 _context.SaveChanges();
+
+                if (yeniMiktar == 0)
+                {
+                    return Json(ResultDto.Success("Stok miktarı 0 olarak güncellendi. Dilerseniz bu kaydı 'Arşivle (Sil)' butonu ile arşive kaldırabilirsiniz."));
+                }
 
                 return Json(ResultDto.Success("Stok miktarı başarıyla güncellendi!"));
             }
@@ -206,6 +206,7 @@ namespace UretimTakip.Web.Controllers
             }
         }
 
+        // Stoğu Yalnızca Sıfır Olan Kaydı Arşivleme (Soft-Delete) Metodu
         [HttpPost]
         public IActionResult StokSil(Guid id)
         {
@@ -220,7 +221,7 @@ namespace UretimTakip.Web.Controllers
                 // Stok miktarı sıfır değilse silmeye izin verme
                 if (stok.Miktar > 0)
                 {
-                    return Json(ResultDto.Failure($"Miktarı {stok.Miktar} olan bir stok kaydı silinemez! Sadece stok miktarı 0 olan kayıtlar arşivlenebilir. Lütfen önce stoğu güncelleyiniz."));
+                    return Json(ResultDto.Failure($"Miktarı {stok.Miktar} olan bir stok kaydı silinemez! Sadece stok miktarı 0 olan kayıtlar arşivlenebilir. Lütfen önce 'Güncelle' butonu ile stoğu sıfırlayın."));
                 }
 
                 stok.IsDeleted = true;
@@ -228,11 +229,43 @@ namespace UretimTakip.Web.Controllers
                 stok.SonGuncellenmeTarihi = DateTime.UtcNow;
                 _context.SaveChanges();
 
-                return Json(ResultDto.Success("Stok kaydı başarıyla arşivlendi! İlgili ürün bilgisi veritabanında korunmaktadır."));
+                return Json(ResultDto.Success("Stok kaydı başarıyla arşivlendi! Geçmiş sipariş ve hareket kayıtlarının korunması için veritabanında arşiv olarak saklanmaya devam edecektir."));
             }
             catch (Exception ex)
             {
                 return Json(ResultDto.Failure("Stok silinirken hata oluştu: " + ex.Message));
+            }
+        }
+
+        // Arşivlenen Stok Kaydını Yeniden Aktifleştirme (Restore)
+        [HttpPost]
+        public IActionResult StokGeriYukle(Guid id)
+        {
+            try
+            {
+                var stok = _context.Stoklar.FirstOrDefault(x => x.StokId == id);
+                if (stok == null)
+                {
+                    return Json(ResultDto.Failure("Stok kaydı bulunamadı!"));
+                }
+
+                // Aynı ürünün aynı depoda aktif bir kaydı var mı kontrol et
+                var aktifAyniKayit = _context.Stoklar.FirstOrDefault(x => x.UrunId == stok.UrunId && x.DepoId == stok.DepoId && !x.IsDeleted && x.StokId != id);
+                if (aktifAyniKayit != null)
+                {
+                    return Json(ResultDto.Failure("Bu ürün için seçili depoda zaten aktif bir stok kaydı bulunmaktadır!"));
+                }
+
+                stok.IsDeleted = false;
+                stok.SonGuncellenmeTarihi = DateTime.UtcNow;
+
+                _context.SaveChanges();
+
+                return Json(ResultDto.Success("Stok kaydı başarıyla arşivden çıkarıldı ve tekrar aktif hale getirildi!"));
+            }
+            catch (Exception ex)
+            {
+                return Json(ResultDto.Failure("Stok geri yüklenirken hata oluştu: " + ex.Message));
             }
         }
     }
