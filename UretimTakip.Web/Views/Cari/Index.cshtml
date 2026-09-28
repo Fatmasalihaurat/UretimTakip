@@ -253,7 +253,7 @@
                 };
 
                 if (!model.CariKodu || !model.Ad || !model.CariTuru) {
-                    alert('Lütfen cari kodu, cari adı ve tür alanlarını eksiksiz doldurun!');
+                    showAlert('warning', 'Eksik Alan', 'Lütfen cari kodu, cari adı ve tür alanlarını eksiksiz doldurun!');
                     return;
                 }
 
@@ -268,13 +268,13 @@
                             $('#cariEkleFormu')[0].reset();
                             $('#rdEkleMusteri').prop('checked', true);
                             carileriGetir();
-                            alert(response.message);
+                            showToast('success', response.message);
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                        showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken bir hata oluştu!');
                     }
                 });
             });
@@ -300,11 +300,11 @@
 
                             $('#cariDuzenleModal').modal('show');
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Cari bilgisi getirilirken sunucu hatası oluştu!');
+                        showAlert('error', 'Hata', 'Cari bilgisi getirilirken sunucu hatası oluştu!');
                     }
                 });
             };
@@ -319,7 +319,7 @@
                 };
 
                 if (!model.CariKodu || !model.Ad || !model.CariTuru) {
-                    alert('Lütfen tüm alanları eksiksiz doldurun!');
+                    showAlert('warning', 'Eksik Alan', 'Lütfen tüm alanları eksiksiz doldurun!');
                     return;
                 }
 
@@ -332,38 +332,45 @@
                         if (response.isSuccess) {
                             $('#cariDuzenleModal').modal('hide');
                             carileriGetir();
-                            alert(response.message);
+                            showToast('success', response.message);
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Güncelleme sırasında sunucu hatası oluştu!');
+                        showAlert('error', 'Hata', 'Güncelleme sırasında sunucu hatası oluştu!');
                     }
                 });
             });
 
             // 5. CARİ SİLME AKSİYONU
             window.cariSil = function (id, cariAdi) {
-                var onay = confirm(`"${cariAdi}" cari kaydını silmek istediğinize emin misiniz?`);
-                if (onay) {
-                    $.ajax({
-                        url: '/Cari/CariSil',
-                        type: 'POST',
-                        data: { id: id },
-                        success: function (response) {
-                            if (response.isSuccess) {
-                                carileriGetir();
-                                alert(response.message);
-                            } else {
-                                alert('Hata: ' + response.message);
+                showConfirm({
+                    title: 'Cari Kaydını Sil',
+                    text: `"${cariAdi}" cari kaydını silmek istediğinize emin misiniz?`,
+                    icon: 'warning',
+                    confirmButtonText: 'Evet, Sil',
+                    cancelButtonText: 'Vazgeç',
+                    confirmButtonColor: '#dc3545',
+                    onConfirm: function () {
+                        $.ajax({
+                            url: '/Cari/CariSil',
+                            type: 'POST',
+                            data: { id: id },
+                            success: function (response) {
+                                if (response.isSuccess) {
+                                    carileriGetir();
+                                    showToast('success', response.message);
+                                } else {
+                                    showAlert('error', 'Hata', response.message);
+                                }
+                            },
+                            error: function () {
+                                showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken bir hata oluştu!');
                             }
-                        },
-                        error: function () {
-                            alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             };
         });
     </script>

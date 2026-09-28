@@ -232,7 +232,13 @@
 
             // Stoğu sıfır olmayan ürünün silinmeye çalışılması durumunda gösterilen uyarı
             window.urunSilEngelli = function (urunAdi, toplamStok) {
-                alert(`⚠️ Stoğu Olan Ürün Silinemez!\n\n"${urunAdi}" ürününe ait depolarda toplam ${toplamStok} adet stok bulunmaktadır.\n\nBir ürünü silebilmek için depolardaki stok miktarının sıfır (0) olması gerekir. Lütfen önce Stok Kontrolü sayfasından stoğu sıfırlayın veya arşivleyin.`);
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Stoğu Olan Ürün Silinemez!',
+                    html: `<b>"${urunAdi}"</b> ürününe ait depolarda toplam <b>${toplamStok}</b> adet stok bulunmaktadır.<br><br>Bir ürünü silebilmek için depolardaki stok miktarının sıfır (0) olması gerekir.<br>Lütfen önce <b>Stok Kontrolü</b> sayfasından stoğu sıfırlayın veya arşivleyin.`,
+                    confirmButtonText: 'Anladım',
+                    confirmButtonColor: '#0d6efd'
+                });
             };
 
             // 2. YENİ ÜRÜN EKLEYEN AJAX FONKSİYONU
@@ -244,7 +250,7 @@
                 };
 
                 if (!model.Ad || !model.UrunKodu || isNaN(model.Fiyat)) {
-                    alert('Lütfen tüm alanları eksiksiz doldurun!');
+                    showAlert('warning', 'Eksik Alan', 'Lütfen tüm alanları eksiksiz doldurun!');
                     return;
                 }
 
@@ -258,61 +264,75 @@
                             $('#urunEkleModal').modal('hide');
                             $('#urunEkleFormu')[0].reset();
                             urunleriGetir();
-                            alert(response.message);
+                            showToast('success', response.message);
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                        showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken bir hata oluştu!');
                     }
                 });
             });
 
             // 3. ÜRÜN SİLME AKSİYONU (Stok 0 ise arşivler)
             window.urunSil = function (id, urunAdi) {
-                var onay = confirm(`"${urunAdi}" ürününü silmek istediğinize emin misiniz?\n\nℹ️ Not: Ürün sistemden ve veritabanından tamamen silinmeyecek, geçmiş sipariş ve fatura kayıtlarının korunması için veritabanında arşiv olarak saklanmaya devam edecektir.`);
-                if (onay) {
-                    $.ajax({
-                        url: '/Urun/UrunSil',
-                        type: 'POST',
-                        data: { id: id },
-                        success: function (response) {
-                            if (response.isSuccess) {
-                                urunleriGetir();
-                                alert(response.message);
-                            } else {
-                                alert('Hata: ' + response.message);
+                showConfirm({
+                    title: 'Ürünü Arşivle (Sil)',
+                    text: `"${urunAdi}" ürününü silmek istediğinize emin misiniz?\n\nℹ️ Not: Ürün sistemden tamamen silinmeyecek, geçmiş sipariş ve fatura kayıtlarının korunması için veritabanında arşiv olarak saklanmaya devam edecektir.`,
+                    icon: 'warning',
+                    confirmButtonText: 'Evet, Sil',
+                    cancelButtonText: 'Vazgeç',
+                    confirmButtonColor: '#dc3545',
+                    onConfirm: function () {
+                        $.ajax({
+                            url: '/Urun/UrunSil',
+                            type: 'POST',
+                            data: { id: id },
+                            success: function (response) {
+                                if (response.isSuccess) {
+                                    urunleriGetir();
+                                    showToast('success', response.message);
+                                } else {
+                                    showAlert('error', 'Hata', response.message);
+                                }
+                            },
+                            error: function () {
+                                showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken bir hata oluştu!');
                             }
-                        },
-                        error: function () {
-                            alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             };
 
             // 4. ÜRÜNÜ ARŞİVDEN GERİ YÜKLEME AKSİYONU
             window.urunGeriYukle = function (id, urunAdi) {
-                var onay = confirm(`"${urunAdi}" ürününü arşivden çıkarıp tekrar aktif ürünler listesine dahil etmek istiyor musunuz?`);
-                if (onay) {
-                    $.ajax({
-                        url: '/Urun/UrunGeriYukle',
-                        type: 'POST',
-                        data: { id: id },
-                        success: function (response) {
-                            if (response.isSuccess) {
-                                urunleriGetir();
-                                alert(response.message);
-                            } else {
-                                alert('Hata: ' + response.message);
+                showConfirm({
+                    title: 'Ürünü Geri Yükle',
+                    text: `"${urunAdi}" ürününü arşivden çıkarıp tekrar aktif ürünler listesine dahil etmek istiyor musunuz?`,
+                    icon: 'question',
+                    confirmButtonText: 'Evet, Aktifleştir',
+                    cancelButtonText: 'Vazgeç',
+                    confirmButtonColor: '#198754',
+                    onConfirm: function () {
+                        $.ajax({
+                            url: '/Urun/UrunGeriYukle',
+                            type: 'POST',
+                            data: { id: id },
+                            success: function (response) {
+                                if (response.isSuccess) {
+                                    urunleriGetir();
+                                    showToast('success', response.message);
+                                } else {
+                                    showAlert('error', 'Hata', response.message);
+                                }
+                            },
+                            error: function () {
+                                showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken bir hata oluştu!');
                             }
-                        },
-                        error: function () {
-                            alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             };
 
             // 5. ÜRÜN DÜZENLEME İÇİN BİLGİLERİ GETİREN AKSİYON
@@ -329,11 +349,11 @@
                             $('#txtDuzenleFiyat').val(response.data.fiyat);
                             $('#urunDuzenleModal').modal('show');
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Ürün bilgileri getirilirken bir hata oluştu!');
+                        showAlert('error', 'Hata', 'Ürün bilgileri getirilirken bir hata oluştu!');
                     }
                 });
             };
@@ -348,7 +368,7 @@
                 };
 
                 if (!model.Ad || !model.UrunKodu || isNaN(model.Fiyat)) {
-                    alert('Lütfen tüm alanları eksiksiz doldurun!');
+                    showAlert('warning', 'Eksik Alan', 'Lütfen tüm alanları eksiksiz doldurun!');
                     return;
                 }
 
@@ -361,13 +381,13 @@
                         if (response.isSuccess) {
                             $('#urunDuzenleModal').modal('hide');
                             urunleriGetir();
-                            alert(response.message);
+                            showToast('success', response.message);
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                        showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken bir hata oluştu!');
                     }
                 });
             });

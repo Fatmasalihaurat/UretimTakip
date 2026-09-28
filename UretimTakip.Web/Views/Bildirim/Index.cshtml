@@ -3,17 +3,27 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>🔔 Bildirim Merkezi</h2>
     <div>
-        <button class="btn btn-outline-primary me-2" onclick="testButceUyarisi()">Test: Bütçe Uyarısı Oluştur</button>
-        <button class="btn btn-primary" onclick="tumunuOkunduYap()">Tümünü Okundu Yap</button>
+        <h2 class="fw-bold mb-1">🔔 Bildirim Merkezi</h2>
+        <p class="text-muted mb-0">Sistem uyarıları, kritik stok bildirimleri ve genel duyurular</p>
+    </div>
+    <div>
+        <button class="btn btn-outline-warning me-2 shadow-sm" onclick="testButceUyarisi()">
+            ⚠️ Test: Bütçe Uyarısı Oluştur
+        </button>
+        <button class="btn btn-primary shadow-sm" onclick="tumunuOkunduYap()">
+            ✓ Tümünü Okundu Yap
+        </button>
     </div>
 </div>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <ul class="list-group list-group-flush" id="bildirimListesi">
-            <!-- Bildirimler buraya eklenecek -->
+            <li class="list-group-item text-center text-muted py-5">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                Bildirimler yükleniyor...
+            </li>
         </ul>
     </div>
 </div>
@@ -32,18 +42,29 @@
                 if (res.isSuccess && res.data.length > 0) {
                     res.data.forEach(function (b) {
                         var bg = b.okunduMu ? 'bg-light' : 'bg-white';
-                        var fw = b.okunduMu ? '' : 'fw-bold';
+                        var fw = b.okunduMu ? 'text-muted' : 'fw-bold text-dark';
+                        var isWarning = /uyarı|bütçe|kritik|stok|dikkat/i.test((b.baslik || '') + ' ' + (b.mesaj || ''));
+                        var badgeHtml = b.okunduMu 
+                            ? '<span class="badge bg-secondary me-2">Okundu</span>' 
+                            : '<span class="badge bg-danger me-2">Yeni</span>';
+                        var iconHtml = isWarning ? '⚠️' : '📢';
                         
                         var item = `
-                            <li class="list-group-item d-flex justify-content-between align-items-center ${bg} p-3">
-                                <div>
-                                    <h6 class="mb-1 ${fw}">${b.baslik}</h6>
-                                    <p class="mb-1 text-muted">${b.mesaj}</p>
-                                    <small class="text-secondary">${new Date(b.olusturulmaTarihi).toLocaleString('tr-TR')}</small>
+                            <li class="list-group-item d-flex justify-content-between align-items-center ${bg} p-3 border-bottom">
+                                <div class="d-flex align-items-start">
+                                    <span class="fs-4 me-3 mt-1">${iconHtml}</span>
+                                    <div>
+                                        <div class="d-flex align-items-center mb-1">
+                                            ${badgeHtml}
+                                            <h6 class="mb-0 ${fw}">${b.baslik}</h6>
+                                        </div>
+                                        <p class="mb-1 text-secondary">${b.mesaj}</p>
+                                        <small class="text-muted">📅 ${new Date(b.olusturulmaTarihi).toLocaleString('tr-TR')}</small>
+                                    </div>
                                 </div>
-                                <div>
-                                    ${!b.okunduMu ? `<button class="btn btn-sm btn-outline-success me-2" onclick="okunduYap('${b.bildirimId}')">Okundu</button>` : ''}
-                                    <button class="btn btn-sm btn-outline-danger" onclick="bildirimSil('${b.bildirimId}')">🚫 Sil</button>
+                                <div class="text-nowrap ms-3">
+                                    ${!b.okunduMu ? `<button class="btn btn-sm btn-outline-success me-2 shadow-sm" onclick="okunduYap('${b.bildirimId}')">✓ Okundu</button>` : ''}
+                                    <button class="btn btn-sm btn-outline-danger shadow-sm" onclick="bildirimSil('${b.bildirimId}')">🗑️ Sil</button>
                                 </div>
                             </li>
                         `;
@@ -52,7 +73,9 @@
                 } else {
                     container.append(`
                         <li class="list-group-item text-center text-muted py-5">
-                            Hiç bildiriminiz yok.
+                            <div class="fs-1 mb-2">📭</div>
+                            <h6>Hiç bildiriminiz bulunmuyor</h6>
+                            <small>Sistemde yeni bir hareket veya uyarı olduğunda burada görüntülenecektir.</small>
                         </li>
                     `);
                 }
@@ -64,6 +87,9 @@
                 if (res.isSuccess) {
                     bildirimleriListele();
                     if(typeof loadUnreadCount === 'function') loadUnreadCount();
+                    showToast('success', 'Bildirim okundu olarak işaretlendi', '', 2000);
+                } else {
+                    showAlert('error', 'Hata', res.message);
                 }
             });
         }
@@ -73,19 +99,33 @@
                 if (res.isSuccess) {
                     bildirimleriListele();
                     if(typeof loadUnreadCount === 'function') loadUnreadCount();
+                    showToast('success', 'Tüm bildirimler okundu olarak işaretlendi', '', 2500);
+                } else {
+                    showAlert('error', 'Hata', res.message);
                 }
             });
         }
 
         function bildirimSil(id) {
-            if(confirm("Bildirimi silmek istediğinize emin misiniz?")) {
-                $.post('/Bildirim/BildirimSil/' + id, function (res) {
-                    if (res.isSuccess) {
-                        bildirimleriListele();
-                        if(typeof loadUnreadCount === 'function') loadUnreadCount();
-                    }
-                });
-            }
+            showConfirm({
+                title: 'Bildirimi Sil',
+                text: 'Bu bildirimi silmek istediğinize emin misiniz?',
+                icon: 'warning',
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç',
+                confirmButtonColor: '#dc3545',
+                onConfirm: function () {
+                    $.post('/Bildirim/BildirimSil/' + id, function (res) {
+                        if (res.isSuccess) {
+                            bildirimleriListele();
+                            if(typeof loadUnreadCount === 'function') loadUnreadCount();
+                            showToast('success', 'Bildirim başarıyla silindi', '', 2000);
+                        } else {
+                            showAlert('error', 'Hata', res.message || 'Bildirim silinemedi.');
+                        }
+                    });
+                }
+            });
         }
 
         function testButceUyarisi() {
@@ -93,7 +133,16 @@
                 if(res.isSuccess) {
                     bildirimleriListele();
                     if(typeof loadUnreadCount === 'function') loadUnreadCount();
-                    alert("Bütçe uyarısı oluşturuldu!");
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Bütçe Uyarısı Oluşturuldu',
+                        text: 'Yeni sistem bildirimi başarıyla oluşturuldu ve bildirim merkezinize eklendi.',
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    showAlert('error', 'Hata', res.message);
                 }
             });
         }

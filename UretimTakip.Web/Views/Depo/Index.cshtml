@@ -189,7 +189,7 @@
 
                 // Boş bırakılamaz alanları kontrol ediyoruz
                 if (!model.Ad || !model.DepoKodu || !model.SorumluKisi || !model.Konum || !model.IrtibatBilgisi || !model.Adres) {
-                    alert('Lütfen tüm alanları eksiksiz doldurun!');
+                    showAlert('warning', 'Eksik Alan', 'Lütfen tüm alanları eksiksiz doldurun!');
                     return;
                 }
 
@@ -203,37 +203,45 @@
                             $('#depoEkleModal').modal('hide'); // Modalı kapat
                             $('#depoEkleFormu')[0].reset(); // Formu temizle
                             depolariGetir(); // Tabloyu tazelemeyi tetikle
-                            alert(response.message);
+                            showToast('success', response.message);
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                        showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken bir hata oluştu!');
                     }
                 });
             });
 
             // 3. Depo Silme Fonksiyonu
             window.depoSil = function (id) {
-                if (confirm('Bu depoyu silmek istediğinizden emin misiniz?')) {
-                    $.ajax({
-                        url: '/Depo/DepoSil', 
-                        type: 'POST',         
-                        data: { id: id },     
-                        success: function (response) {
-                            if (response.isSuccess) {
-                                depolariGetir(); 
-                                alert(response.message); 
-                            } else {
-                                alert('Hata: ' + response.message); 
+                showConfirm({
+                    title: 'Depoyu Sil',
+                    text: 'Bu depoyu silmek istediğinizden emin misiniz?',
+                    icon: 'warning',
+                    confirmButtonText: 'Evet, Sil',
+                    cancelButtonText: 'Vazgeç',
+                    confirmButtonColor: '#dc3545',
+                    onConfirm: function () {
+                        $.ajax({
+                            url: '/Depo/DepoSil', 
+                            type: 'POST',         
+                            data: { id: id },     
+                            success: function (response) {
+                                if (response.isSuccess) {
+                                    depolariGetir(); 
+                                    showToast('success', response.message); 
+                                } else {
+                                    showAlert('error', 'Hata', response.message); 
+                                }
+                            },
+                            error: function () {
+                                showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken bir hata oluştu!');
                             }
-                        },
-                        error: function () {
-                            alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             };
 
             // 4. Depo Düzenleme İçin Bilgileri Getiren Aksiyon
@@ -253,11 +261,11 @@
                             $('#txtDuzenleAdres').val(response.data.adres);
                             $('#depoDuzenleModal').modal('show');
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Depo bilgileri getirilirken bir hata oluştu!');
+                        showAlert('error', 'Hata', 'Depo bilgileri getirilirken bir hata oluştu!');
                     }
                 });
             };
@@ -275,7 +283,7 @@
                 };
 
                 if (!model.Ad || !model.DepoKodu || !model.SorumluKisi || !model.Konum || !model.IrtibatBilgisi || !model.Adres) {
-                    alert('Lütfen tüm alanları eksiksiz doldurun!');
+                    showAlert('warning', 'Eksik Alan', 'Lütfen tüm alanları eksiksiz doldurun!');
                     return;
                 }
 
@@ -288,13 +296,13 @@
                         if (response.isSuccess) {
                             $('#depoDuzenleModal').modal('hide');
                             depolariGetir();
-                            alert(response.message);
+                            showToast('success', response.message);
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Sunucuyla iletişim kurulurken bir hata oluştu!');
+                        showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken bir hata oluştu!');
                     }
                 });
             });

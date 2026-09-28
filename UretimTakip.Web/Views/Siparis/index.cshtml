@@ -658,7 +658,7 @@
                 $(btn).closest('tr').remove();
                 hesapla();
             } else {
-                alert('Siparişte en az bir ürün satırı bulunmalıdır!');
+                showAlert('warning', 'Uyarı', 'Siparişte en az bir ürün satırı bulunmalıdır!');
             }
         }
 
@@ -725,15 +725,15 @@
             var vadeTarihi = $('#txtVadeTarihi').val() || null;
 
             if (!cariId) {
-                alert('Lütfen bir cari hesap seçin!');
+                showAlert('warning', 'Eksik Alan', 'Lütfen bir cari hesap seçin!');
                 return;
             }
             if (!depoId) {
-                alert('Lütfen bir depo seçin!');
+                showAlert('warning', 'Eksik Alan', 'Lütfen bir depo seçin!');
                 return;
             }
             if (!siparisTarihi) {
-                alert('Lütfen sipariş tarihini girin!');
+                showAlert('warning', 'Eksik Alan', 'Lütfen sipariş tarihini girin!');
                 return;
             }
 
@@ -758,7 +758,7 @@
             });
 
             if (hataVar || detaylar.length === 0) {
-                alert('Lütfen tüm satırlardaki ürün, miktar ve fiyat bilgilerini eksiksiz doldurun!');
+                showAlert('warning', 'Eksik Satır', 'Lütfen tüm satırlardaki ürün, miktar ve fiyat bilgilerini eksiksiz doldurun!');
                 return;
             }
 
@@ -780,41 +780,51 @@
                     if (res.isSuccess) {
                         $('#siparisOlusturModal').modal('hide');
                         siparisleriGetir();
-                        alert(res.message);
+                        showToast('success', res.message);
                     } else {
-                        alert('Hata: ' + res.message);
+                        showAlert('error', 'Hata', res.message);
                     }
                 },
                 error: function () {
-                    alert('Sipariş oluşturulurken sunucu hatası meydana geldi!');
+                    showAlert('error', 'Hata', 'Sipariş oluşturulurken sunucu hatası meydana geldi!');
                 }
             });
         }
 
         // 8. SİPARİŞ DURUM GÜNCELLEME (TAMAMLA / İPTAL ET)
         function siparisDurumDegistir(id, durum) {
-            var mesaj = durum === 'Tamamlandı'
+            var isTamamla = durum === 'Tamamlandı';
+            var title = isTamamla ? 'Siparişi Tamamla' : 'Siparişi İptal Et';
+            var mesaj = isTamamla
                 ? 'Bu siparişi tamamlamak istediğinize emin misiniz? (Alış siparişi ise ürünler depoya kabul edilecek ve stoklara eklenecektir)'
                 : 'Bu siparişi iptal etmek istediğinize emin misiniz? (Satış siparişi ise ürünler depodaki stoklara geri yüklenecektir)';
 
-            if (confirm(mesaj)) {
-                $.ajax({
-                    url: '/Siparis/SiparisDurumGuncelle',
-                    type: 'POST',
-                    data: { id: id, yeniDurum: durum },
-                    success: function (res) {
-                        if (res.isSuccess) {
-                            siparisleriGetir();
-                            alert(res.message);
-                        } else {
-                            alert('Hata: ' + res.message);
+            showConfirm({
+                title: title,
+                text: mesaj,
+                icon: isTamamla ? 'question' : 'warning',
+                confirmButtonText: isTamamla ? 'Evet, Tamamla' : 'Evet, İptal Et',
+                cancelButtonText: 'Vazgeç',
+                confirmButtonColor: isTamamla ? '#198754' : '#dc3545',
+                onConfirm: function () {
+                    $.ajax({
+                        url: '/Siparis/SiparisDurumGuncelle',
+                        type: 'POST',
+                        data: { id: id, yeniDurum: durum },
+                        success: function (res) {
+                            if (res.isSuccess) {
+                                siparisleriGetir();
+                                showToast('success', res.message);
+                            } else {
+                                showAlert('error', 'Hata', res.message);
+                            }
+                        },
+                        error: function () {
+                            showAlert('error', 'Hata', 'Durum güncellenirken sunucu hatası oluştu!');
                         }
-                    },
-                    error: function () {
-                        alert('Durum güncellenirken sunucu hatası oluştu!');
-                    }
-                });
-            }
+                    });
+                }
+            });
         }
 
         function siparisSil(id) {
@@ -837,7 +847,7 @@
 
                     $('#siparisDuzenleModal').modal('show');
                 } else {
-                    alert('Hata: ' + res.message);
+                    showAlert('error', 'Hata', res.message);
                 }
             });
         }
@@ -853,7 +863,7 @@
             };
 
             if (!model.CariId || !model.DepoId || !model.SiparisTarihi) {
-                alert('Lütfen tüm zorunlu alanları doldurun!');
+                showAlert('warning', 'Eksik Alan', 'Lütfen tüm zorunlu alanları doldurun!');
                 return;
             }
 
@@ -866,13 +876,13 @@
                     if (res.isSuccess) {
                         $('#siparisDuzenleModal').modal('hide');
                         siparisleriGetir();
-                        alert(res.message);
+                        showToast('success', res.message);
                     } else {
-                        alert('Hata: ' + res.message);
+                        showAlert('error', 'Hata', res.message);
                     }
                 },
                 error: function () {
-                    alert('Güncelleme sırasında sunucu hatası oluştu!');
+                    showAlert('error', 'Hata', 'Güncelleme sırasında sunucu hatası oluştu!');
                 }
             });
         }
@@ -929,7 +939,7 @@
 
                     $('#siparisDetayModal').modal('show');
                 } else {
-                    alert('Hata: ' + res.message);
+                    showAlert('error', 'Hata', res.message);
                 }
             });
         }

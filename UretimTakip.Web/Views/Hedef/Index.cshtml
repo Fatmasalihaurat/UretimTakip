@@ -129,7 +129,7 @@
                     $('#hedefModalBaslik').text('Hedefi Düzenle');
                     $('#hedefModal').modal('show');
                 } else {
-                    alert(res.message);
+                    showAlert('error', 'Hata', res.message);
                 }
             });
         }
@@ -140,6 +140,11 @@
                 HedeflenenTutar: parseFloat($('#hedefTutar').val()),
                 MevcutTutar: parseFloat($('#mevcutTutar').val())
             };
+
+            if (!data.Baslik || isNaN(data.HedeflenenTutar)) {
+                showAlert('warning', 'Eksik Alan', 'Lütfen başlık ve hedeflenen tutar alanlarını doldurun!');
+                return;
+            }
 
             var id = $('#hedefId').val();
             var url = id ? '/Hedef/HedefGuncelle' : '/Hedef/HedefEkle';
@@ -157,8 +162,9 @@
                     if (res.isSuccess) {
                         $('#hedefModal').modal('hide');
                         hedefListele();
+                        showToast('success', id ? 'Hedef başarıyla güncellendi' : 'Yeni hedef başarıyla eklendi');
                     } else {
-                        alert(res.message);
+                        showAlert('error', 'Hata', res.message);
                     }
                 }
             });
@@ -175,8 +181,9 @@
                 if (res.isSuccess) {
                     $('#silModal').modal('hide');
                     hedefListele();
+                    showToast('success', 'Hedef başarıyla silindi');
                 } else {
-                    alert(res.message);
+                    showAlert('error', 'Hata', res.message);
                 }
             });
         }

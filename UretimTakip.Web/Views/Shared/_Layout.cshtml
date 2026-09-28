@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Üretim Takip Sistemi</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <style>
         .sidebar {
@@ -32,6 +33,25 @@
         .topbar {
             background-color: #ffffff;
             border-bottom: 1px solid #dee2e6;
+        }
+
+        .badge-pulse {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            animation: pulse-red 1.8s infinite;
+        }
+        @@keyframes pulse-red {
+            0% {
+                transform: translate(-50%, -50%) scale(0.95);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+            70% {
+                transform: translate(-50%, -50%) scale(1.15);
+                box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0.95);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
         }
     </style>
 </head>
@@ -110,41 +130,117 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true" ></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
     <script>
+        // Bildirim takip mekanizması
+        let previousUnreadCount = null;
+
         $(document).ready(function() {
-            loadUnreadCount();
+            // İlk yüklemede okunmamış sayısını ve bildirimleri kontrol et
+            checkLiveNotifications(false);
             
-            // Notification dropdown opened
+            // Notification dropdown açıldığında listeyi yükle
             $('#notificationDropdown').on('show.bs.dropdown', function () {
                 loadNotificationsDropdown();
             });
+
+            // Her 10 saniyede bir yeni bildirimleri kontrol et (Canlı SweetAlert Bildirimi)
+            setInterval(function () {
+                checkLiveNotifications(true);
+            }, 10000);
         });
 
-        function loadUnreadCount() {
+        // Bildirimleri getiren ve yeni gelen varsa SweetAlert Toast ile ekranda gösteren fonksiyon
+        function checkLiveNotifications(showToastOnNew) {
             $.get('/Bildirim/OkunmamisSayisi', function(res) {
-                if(res.isSuccess && res.data > 0) {
-                    $('#unreadNotificationCount').text(res.data).show();
-                } else {
-                    $('#unreadNotificationCount').hide();
+                if(res && res.isSuccess) {
+                    const count = res.data || 0;
+                    const badge = $('#unreadNotificationCount');
+
+                    if(count > 0) {
+                        badge.text(count > 99 ? '99+' : count).show().addClass('badge-pulse');
+                    } else {
+                        badge.hide().removeClass('badge-pulse');
+                    }
+
+                    // Eğer yeni bir bildirim geldiyse veya sayı arttıysa detayları çekip SweetAlert Toast göster
+                    if(showToastOnNew && previousUnreadCount !== null && count > previousUnreadCount) {
+                        fetchAndToastLatestNotifications();
+                    }
+
+                    previousUnreadCount = count;
                 }
             });
         }
 
+        // Son bildirimleri çekip yeni olanları SweetAlert Toast ile göster
+        function fetchAndToastLatestNotifications() {
+            $.get('/Bildirim/BildirimleriListele', function(res) {
+                if(res && res.isSuccess && res.data && res.data.length > 0) {
+                    let notifiedIds = [];
+                    try {
+                        notifiedIds = JSON.parse(sessionStorage.getItem('notifiedBildirimler') || '[]');
+                    } catch(e) {
+                        notifiedIds = [];
+                    }
+
+                    const unread = res.data.filter(x => !x.okunduMu);
+                    // Henüz toast gösterilmemiş olanlar
+                    const newUnread = unread.filter(x => !notifiedIds.includes(x.bildirimId));
+
+                    if(newUnread.length > 0) {
+                        newUnread.forEach(function(item) {
+                            const isWarning = /uyarı|bütçe|kritik|stok|dikkat/i.test((item.baslik || '') + ' ' + (item.mesaj || ''));
+                            
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: isWarning ? 'warning' : 'info',
+                                title: `🔔 ${item.baslik}`,
+                                text: item.mesaj,
+                                showConfirmButton: false,
+                                timer: 6000,
+                                timerProgressBar: true,
+                                didOpen: (toast) => {
+                                    toast.style.cursor = 'pointer';
+                                    toast.addEventListener('click', () => {
+                                        window.location.href = '/Bildirim/Index';
+                                    });
+                                }
+                            });
+
+                            notifiedIds.push(item.bildirimId);
+                        });
+
+                        sessionStorage.setItem('notifiedBildirimler', JSON.stringify(notifiedIds));
+                    }
+                }
+            });
+        }
+
+        function loadUnreadCount() {
+            checkLiveNotifications(false);
+        }
+
         function loadNotificationsDropdown() {
             $.get('/Bildirim/BildirimleriListele', function(res) {
-                if(res.isSuccess) {
+                if(res && res.isSuccess) {
                     var html = '';
-                    var unreadList = res.data.filter(x => !x.okunduMu).slice(0, 5); // Show top 5 unread
+                    var unreadList = res.data.filter(x => !x.okunduMu).slice(0, 5); // En son 5 okunmamış
                     
                     if(unreadList.length === 0) {
-                        html = '<li><a class="dropdown-item text-center text-muted" href="#">Yeni bildirim yok</a></li>';
+                        html = '<li><a class="dropdown-item text-center text-muted py-3" href="#">Yeni bildirim yok</a></li>';
                     } else {
                         unreadList.forEach(function(item) {
+                            var dateStr = new Date(item.olusturulmaTarihi).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
                             html += `<li>
-                                        <a class="dropdown-item" href="#" onclick="markAsRead('${item.bildirimId}')">
-                                            <div class="fw-bold">${item.baslik}</div>
-                                            <div class="small text-muted text-wrap">${item.mesaj}</div>
+                                        <a class="dropdown-item py-2" href="#" onclick="markAsRead('${item.bildirimId}', event)">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="fw-bold text-dark">${item.baslik}</div>
+                                                <small class="text-muted" style="font-size: 0.75rem;">${dateStr}</small>
+                                            </div>
+                                            <div class="small text-muted text-truncate" style="max-width: 280px;">${item.mesaj}</div>
                                         </a>
                                      </li>`;
                         });
@@ -154,20 +250,27 @@
             });
         }
 
-        function markAsRead(id) {
+        function markAsRead(id, event) {
+            if(event) event.preventDefault();
             $.post('/Bildirim/OkunduYap/' + id, function(res) {
-                if(res.isSuccess) {
+                if(res && res.isSuccess) {
                     loadUnreadCount();
                     loadNotificationsDropdown();
+                    if (window.showToast) {
+                        showToast('success', 'Bildirim okundu olarak işaretlendi', '', 2000);
+                    }
                 }
             });
         }
 
         function markAllAsRead() {
             $.post('/Bildirim/TumunuOkunduYap', function(res) {
-                if(res.isSuccess) {
+                if(res && res.isSuccess) {
                     loadUnreadCount();
                     loadNotificationsDropdown();
+                    if (window.showToast) {
+                        showToast('success', 'Tüm bildirimler okundu olarak işaretlendi', '', 2000);
+                    }
                 }
             });
         }

@@ -299,7 +299,13 @@
 
             // Stoğu sıfır olmayan kaydın silinmeye çalışılması durumunda gösterilen engel uyarısı
             window.stokSilEngelli = function (urunAdi, depoAdi, miktar) {
-                alert(`⚠️ Stoğu Olan Kayıt Silinemez!\n\n"${depoAdi}" deposundaki "${urunAdi}" ürününe ait ${miktar} adet stok bulunmaktadır.\n\nBir stok kaydını silebilmek (arşivlemek) için depodaki stok miktarının sıfır (0) olması gerekir.\n\nLütfen önce 'Güncelle' butonunu kullanarak stoğu sıfırlayın veya sipariş/çıkış işlemlerini tamamlayın.`);
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Stoğu Olan Kayıt Silinemez!',
+                    html: `<b>"${depoAdi}"</b> deposundaki <b>"${urunAdi}"</b> ürününe ait <b>${miktar}</b> adet stok bulunmaktadır.<br><br>Bir stok kaydını silebilmek (arşivlemek) için depodaki stok miktarının sıfır (0) olması gerekir.<br><br>Lütfen önce <b>Güncelle</b> butonunu kullanarak stoğu sıfırlayın veya sipariş/çıkış işlemlerini tamamlayın.`,
+                    confirmButtonText: 'Anladım',
+                    confirmButtonColor: '#0d6efd'
+                });
             };
 
             // 2. Ürün ve Depo Dropdown'larını doldurma fonksiyonu (AJAX GET)
@@ -354,7 +360,7 @@
 
                 // Form validation
                 if (!model.DepoId || !model.UrunId || !model.StokKodu || isNaN(model.Miktar) || model.Miktar < 0) {
-                    alert('Lütfen tüm alanları eksiksiz ve doğru şekilde doldurun!');
+                    showAlert('warning', 'Eksik veya Hatalı Alan', 'Lütfen tüm alanları eksiksiz ve doğru şekilde doldurun!');
                     return;
                 }
 
@@ -368,13 +374,13 @@
                             $('#stokEkleModal').modal('hide');
                             $('#stokEkleFormu')[0].reset();
                             stoklariGetir();
-                            alert(response.message);
+                            showToast('success', response.message);
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Sunucuyla iletişim kurulurken hata oluştu!');
+                        showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken hata oluştu!');
                     }
                 });
             });
@@ -399,7 +405,7 @@
                 var islemTuru = $('input[name="islemTuru"]:checked').val();
 
                 if (isNaN(islemMiktari) || islemMiktari < 0) {
-                    alert('Lütfen geçerli ve 0 veya daha büyük bir işlem miktarı girin!');
+                    showAlert('warning', 'Geçersiz Miktar', 'Lütfen geçerli ve 0 veya daha büyük bir işlem miktarı girin!');
                     return;
                 }
 
@@ -411,7 +417,7 @@
                 }
 
                 if (yeniMiktar < 0) {
-                    alert('Stok miktarı 0\'dan küçük olamaz! Çıkarılacak miktar, mevcut stoktan fazla olamaz.');
+                    showAlert('warning', 'Yetersiz Stok', 'Stok miktarı 0\'dan küçük olamaz! Çıkarılacak miktar, mevcut stoktan fazla olamaz.');
                     return;
                 }
 
@@ -426,61 +432,75 @@
                         if (response.isSuccess) {
                             $('#stokGuncelleModal').modal('hide');
                             stoklariGetir();
-                            alert(response.message);
+                            showToast('success', response.message);
                         } else {
-                            alert('Hata: ' + response.message);
+                            showAlert('error', 'Hata', response.message);
                         }
                     },
                     error: function () {
-                        alert('Sunucuyla iletişim kurulurken hata oluştu!');
+                        showAlert('error', 'Hata', 'Sunucuyla iletişim kurulurken hata oluştu!');
                     }
                 });
             });
 
             // 6. Sıfır Miktarlı Stoğu Arşivleme (Soft-Delete) Fonksiyonu
             window.stokSil = function (stokId, urunAdi, depoAdi) {
-                var onay = confirm(`"${depoAdi}" deposundaki "${urunAdi}" stok kaydını silmek (arşivlemek) istediğinize emin misiniz?\n\nℹ️ Not: Kayıt veritabanından tamamen silinmeyecek, geçmiş sipariş ve fatura hareketlerinin bütünlüğü için arşivde saklanmaya devam edecektir.`);
-                if (onay) {
-                    $.ajax({
-                        url: '/Stok/StokSil',
-                        type: 'POST',
-                        data: { id: stokId },
-                        success: function (response) {
-                            if (response.isSuccess) {
-                                stoklariGetir();
-                                alert(response.message);
-                            } else {
-                                alert('Hata: ' + response.message);
+                showConfirm({
+                    title: 'Stok Kaydını Arşivle (Sil)',
+                    text: `"${depoAdi}" deposundaki "${urunAdi}" stok kaydını silmek (arşivlemek) istediğinize emin misiniz?\n\nℹ️ Not: Kayıt veritabanından tamamen silinmeyecek, geçmiş sipariş ve fatura hareketlerinin bütünlüğü için arşivde saklanmaya devam edecektir.`,
+                    icon: 'warning',
+                    confirmButtonText: 'Evet, Arşivle',
+                    cancelButtonText: 'Vazgeç',
+                    confirmButtonColor: '#dc3545',
+                    onConfirm: function () {
+                        $.ajax({
+                            url: '/Stok/StokSil',
+                            type: 'POST',
+                            data: { id: stokId },
+                            success: function (response) {
+                                if (response.isSuccess) {
+                                    stoklariGetir();
+                                    showToast('success', response.message);
+                                } else {
+                                    showAlert('error', 'Hata', response.message);
+                                }
+                            },
+                            error: function () {
+                                showAlert('error', 'Hata', 'Silme işlemi sırasında sunucu hatası oluştu!');
                             }
-                        },
-                        error: function () {
-                            alert('Silme işlemi sırasında sunucu hatası oluştu!');
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             };
 
             // 7. Arşivdeki Stoğu Yeniden Aktifleştirme (Restore) Fonksiyonu
             window.stokGeriYukle = function (stokId, urunAdi, depoAdi) {
-                var onay = confirm(`"${depoAdi}" deposundaki "${urunAdi}" stok kaydını arşivden çıkarıp tekrar aktif stoklar listesine dahil etmek istiyor musunuz?`);
-                if (onay) {
-                    $.ajax({
-                        url: '/Stok/StokGeriYukle',
-                        type: 'POST',
-                        data: { id: stokId },
-                        success: function (response) {
-                            if (response.isSuccess) {
-                                stoklariGetir();
-                                alert(response.message);
-                            } else {
-                                alert('Hata: ' + response.message);
+                showConfirm({
+                    title: 'Stoğu Geri Yükle',
+                    text: `"${depoAdi}" deposundaki "${urunAdi}" stok kaydını arşivden çıkarıp tekrar aktif stoklar listesine dahil etmek istiyor musunuz?`,
+                    icon: 'question',
+                    confirmButtonText: 'Evet, Aktifleştir',
+                    cancelButtonText: 'Vazgeç',
+                    confirmButtonColor: '#198754',
+                    onConfirm: function () {
+                        $.ajax({
+                            url: '/Stok/StokGeriYukle',
+                            type: 'POST',
+                            data: { id: stokId },
+                            success: function (response) {
+                                if (response.isSuccess) {
+                                    stoklariGetir();
+                                    showToast('success', response.message);
+                                } else {
+                                    showAlert('error', 'Hata', response.message);
+                                }
+                            },
+                            error: function () {
+                                showAlert('error', 'Hata', 'Geri yükleme işlemi sırasında sunucu hatası oluştu!');
                             }
-                        },
-                        error: function () {
-                            alert('Geri yükleme işlemi sırasında sunucu hatası oluştu!');
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             };
         });
     </script>
