@@ -1,12 +1,49 @@
-// Site-wide SweetAlert2 & Notification Utilities
+// =========================================================================
+// Site-wide SweetAlert2 & Notification Helper Utilities
+// =========================================================================
 
-// SweetAlert2 Toast helper
-window.showToast = function (icon, title, message, timer = 4000) {
-    if (typeof Swal === 'undefined') return;
+// Modern SweetAlert2 Toast Helper
+// Arguments flexible:
+//   showToast('success', 'İşlem Başarılı')
+//   showToast('success', 'Başlık', 'Detay mesajı', 3500)
+//   showToast('Mesaj metni')
+window.showToast = function (arg1, arg2, arg3, arg4) {
+    if (typeof Swal === 'undefined') {
+        console.warn('SweetAlert2 (Swal) yüklenemediği için toast gösterilemiyor.');
+        return Promise.resolve();
+    }
+
+    const validIcons = ['success', 'error', 'warning', 'info', 'question'];
+    let icon = 'info';
+    let title = '';
+    let message = '';
+    let timer = 3500;
+
+    if (arguments.length === 1) {
+        // Tek parametre girilmişse doğrudan başlık/mesaj kabul et
+        title = arg1 ? String(arg1) : '';
+    } else if (arguments.length === 2) {
+        if (validIcons.includes(arg1)) {
+            icon = arg1;
+            title = arg2 ? String(arg2) : '';
+        } else {
+            title = arg1 ? String(arg1) : '';
+            message = arg2 ? String(arg2) : '';
+        }
+    } else {
+        icon = validIcons.includes(arg1) ? arg1 : 'info';
+        title = arg2 ? String(arg2) : '';
+        message = arg3 ? String(arg3) : '';
+        if (typeof arg4 === 'number' && arg4 > 0) {
+            timer = arg4;
+        }
+    }
+
     const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',
         showConfirmButton: false,
+        showCloseButton: true,
         timer: timer,
         timerProgressBar: true,
         didOpen: (toast) => {
@@ -16,34 +53,50 @@ window.showToast = function (icon, title, message, timer = 4000) {
     });
 
     return Toast.fire({
-        icon: icon || 'info',
-        title: title || '',
+        icon: icon,
+        title: title || undefined,
         text: message || undefined
     });
 };
 
-// SweetAlert2 Modal Alert helper
+// Modern SweetAlert2 Modal Alert Helper
 window.showAlert = function (icon, title, text) {
     if (typeof Swal === 'undefined') {
-        window._nativeAlert ? window._nativeAlert(text || title) : alert(text || title);
+        const fullMsg = (title ? title + ': ' : '') + (text || '');
+        if (window._nativeAlert) {
+            window._nativeAlert(fullMsg);
+        } else {
+            alert(fullMsg);
+        }
         return Promise.resolve();
     }
+
+    const validIcons = ['success', 'error', 'warning', 'info', 'question'];
+    const iconType = validIcons.includes(icon) ? icon : 'info';
+
     return Swal.fire({
-        icon: icon || 'info',
-        title: title || 'Bilgilendirme',
+        icon: iconType,
+        title: title || (iconType === 'error' ? 'Hata' : (iconType === 'warning' ? 'Uyarı' : 'Bilgi')),
         text: text || '',
         confirmButtonText: 'Tamam',
         confirmButtonColor: '#0d6efd'
     });
 };
 
-// SweetAlert2 Confirmation helper
+// Modern SweetAlert2 Confirmation Dialog Helper
 window.showConfirm = function (options) {
+    options = options || {};
+
     if (typeof Swal === 'undefined') {
-        const ok = confirm(options.text || options.title || 'İşlemi onaylıyor musunuz?');
-        if (ok && typeof options.onConfirm === 'function') options.onConfirm();
-        return;
+        const ok = confirm(options.text || options.title || 'Bu işlemi gerçekleştirmek istediğinize emin misiniz?');
+        if (ok && typeof options.onConfirm === 'function') {
+            options.onConfirm();
+        } else if (!ok && typeof options.onCancel === 'function') {
+            options.onCancel();
+        }
+        return Promise.resolve({ isConfirmed: ok });
     }
+
     return Swal.fire({
         title: options.title || 'Emin misiniz?',
         text: options.text || 'Bu işlemi gerçekleştirmek istediğinize emin misiniz?',
@@ -53,21 +106,23 @@ window.showConfirm = function (options) {
         cancelButtonColor: options.cancelButtonColor || '#6c757d',
         confirmButtonText: options.confirmButtonText || 'Evet, Onaylıyorum',
         cancelButtonText: options.cancelButtonText || 'Vazgeç',
-        reverseButtons: true
+        reverseButtons: true,
+        focusCancel: true
     }).then((result) => {
         if (result.isConfirmed) {
             if (typeof options.onConfirm === 'function') {
                 options.onConfirm();
             }
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
+        } else if (result.dismiss === Swal.DismissReason.cancel || result.isDismissed) {
             if (typeof options.onCancel === 'function') {
                 options.onCancel();
             }
         }
+        return result;
     });
 };
 
-// Override window.alert so that any standard browser alert call renders as a modern SweetAlert2 modal
+// Standart browser alert çağrılarını şık SweetAlert2 modalına dönüştür
 if (!window._nativeAlert) {
     window._nativeAlert = window.alert;
     window.alert = function (message) {

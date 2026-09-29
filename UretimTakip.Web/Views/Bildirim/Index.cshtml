@@ -86,7 +86,7 @@
             $.post('/Bildirim/OkunduYap/' + id, function (res) {
                 if (res.isSuccess) {
                     bildirimleriListele();
-                    if(typeof loadUnreadCount === 'function') loadUnreadCount();
+                    if(typeof checkLiveNotifications === 'function') checkLiveNotifications(false);
                     showToast('success', 'Bildirim okundu olarak işaretlendi', '', 2000);
                 } else {
                     showAlert('error', 'Hata', res.message);
@@ -98,7 +98,7 @@
             $.post('/Bildirim/TumunuOkunduYap', function (res) {
                 if (res.isSuccess) {
                     bildirimleriListele();
-                    if(typeof loadUnreadCount === 'function') loadUnreadCount();
+                    if(typeof checkLiveNotifications === 'function') checkLiveNotifications(false);
                     showToast('success', 'Tüm bildirimler okundu olarak işaretlendi', '', 2500);
                 } else {
                     showAlert('error', 'Hata', res.message);
@@ -118,7 +118,7 @@
                     $.post('/Bildirim/BildirimSil/' + id, function (res) {
                         if (res.isSuccess) {
                             bildirimleriListele();
-                            if(typeof loadUnreadCount === 'function') loadUnreadCount();
+                            if(typeof checkLiveNotifications === 'function') checkLiveNotifications(false);
                             showToast('success', 'Bildirim başarıyla silindi', '', 2000);
                         } else {
                             showAlert('error', 'Hata', res.message || 'Bildirim silinemedi.');
@@ -132,15 +132,10 @@
             $.post('/Bildirim/ButceUyarisiOlustur', function (res) {
                 if(res.isSuccess) {
                     bildirimleriListele();
-                    if(typeof loadUnreadCount === 'function') loadUnreadCount();
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Bütçe Uyarısı Oluşturuldu',
-                        text: 'Yeni sistem bildirimi başarıyla oluşturuldu ve bildirim merkezinize eklendi.',
-                        timer: 2500,
-                        showConfirmButton: false
-                    });
+                    if(typeof checkLiveNotifications === 'function') {
+                        checkLiveNotifications(true);
+                    }
+                    showToast('success', 'Bütçe uyarısı oluşturuldu!', 'Canlı bildirim toast ekranına gönderildi.', 3000);
                 } else {
                     showAlert('error', 'Hata', res.message);
                 }
